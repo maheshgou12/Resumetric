@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.env
+*.env
+*.local
+*.db
+*.sqlite
+*.sqlite3
+venv/
+.venv/
+
+# Node
+node_modules/
+dist/
+.next/
+.nuxt/
+.output/
+.cache/
+
+# Frontend build
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Alembic
+alembic/versions/
+
+# Uploads (never commit files)
+uploads/
+reports/
