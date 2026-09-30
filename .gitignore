@@ -50,3 +50,4 @@ alembic/versions/
 # Uploads (never commit files)
 uploads/
 reports/
+*.bak
