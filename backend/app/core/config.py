@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "noreply@resumeanalyzerpro.com"
     EMAIL_FROM_NAME: str = "Resume Analyzer Pro"
 
+    # Email via Gmail SMTP (delivers to ANY inbox, no domain needed).
+    # Create an App Password at myaccount.google.com/apppasswords (needs 2-Step Verification).
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 465
+    SMTP_USERNAME: str = ""
+    SMTP_APP_PASSWORD: str = ""
+
     # AWS S3 / Cloudflare R2
     S3_ACCESS_KEY_ID: str = ""
     S3_SECRET_ACCESS_KEY: str = ""
@@ -74,8 +81,8 @@ class Settings(BaseSettings):
     # File Uploads
     MAX_UPLOAD_SIZE_MB: int = 5
 
-    # Rate Limiting
-    FREE_TIER_ANALYSES_PER_MONTH: int = 5
+    # Rate Limiting (kept for compatibility — analyses are unlimited, not enforced)
+    FREE_TIER_ANALYSES_PER_MONTH: int = 0
 
     # Sentry
     SENTRY_DSN: str = ""

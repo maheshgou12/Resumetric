@@ -57,65 +57,105 @@ CONTACT_PATTERNS = [
 ]
 
 
-def compute_ats_score(resume_text: str) -> tuple[float, list[str]]:
+def compute_ats_score(resume_text: str, job_description: str = "") -> tuple[float, list[str]]:
     """
-    Returns (score 0-100, list of issues found)
-    Checks:
-    - Has contact info (email + phone)
-    - Has standard section headers
-    - No excessive special characters
-    - Reasonable length
-    - No images-only content (verified by text existence)
+    JD-aware ATS score (0-100), point-wise issues.
+    A. Format & readability ............ 40 pts (email, phone, sections, length, chars)
+    B. JD skill coverage ............... 35 pts (matched JD skills / total JD skills)
+    C. JD keyword overlap .............. 25 pts (distinctive JD terms found in resume)
+    Without a JD, only section A is scored (scaled to 100) + a note.
     """
-    score = 100.0
-    issues = []
+    issues: list[str] = []
     text_lower = resume_text.lower()
 
-    # Check contact info
-    has_email = bool(re.search(CONTACT_PATTERNS[0], resume_text))
-    has_phone = bool(re.search(CONTACT_PATTERNS[1], resume_text))
+    # ── A. Format & readability (40) ─────────────────────────────
+    fmt = 40.0
+    if not re.search(CONTACT_PATTERNS[0], resume_text):
+        fmt -= 10
+        issues.append("No email address detected (-10 format)")
+    if not re.search(CONTACT_PATTERNS[1], resume_text):
+        fmt -= 5
+        issues.append("No phone number detected (-5 format)")
 
-    if not has_email:
-        score -= 15
-        issues.append("No email address detected")
-    if not has_phone:
-        score -= 10
-        issues.append("No phone number detected")
+    found_sections = sum(1 for p in ATS_SECTION_HEADERS if re.search(p, text_lower))
+    section_pts = round(found_sections / len(ATS_SECTION_HEADERS) * 15)
+    fmt -= (15 - section_pts)
+    if found_sections < len(ATS_SECTION_HEADERS):
+        issues.append(
+            f"Only {found_sections} of {len(ATS_SECTION_HEADERS)} standard sections "
+            f"(Experience, Education, Skills…) (-{15 - section_pts} format)"
+        )
 
-    # Check section headers
-    found_sections = 0
-    for pattern in ATS_SECTION_HEADERS:
-        if re.search(pattern, text_lower):
-            found_sections += 1
+    words = len(resume_text.split())
+    if words >= 200:
+        pass
+    elif words >= 100:
+        fmt -= 2
+        issues.append("Resume is relatively short (< 200 words) (-2 format)")
+    else:
+        fmt -= 5
+        issues.append("Resume very short (< 100 words) (-5 format)")
 
-    if found_sections < 3:
-        score -= 20
-        issues.append(f"Only {found_sections} of 6 standard section headers detected (Experience, Education, Skills, etc.)")
-    elif found_sections < 5:
-        score -= 10
-        issues.append(f"Only {found_sections} of 6 standard section headers detected")
-
-    # Check text length
-    word_count = len(resume_text.split())
-    if word_count < 100:
-        score -= 20
-        issues.append("Resume appears very short (< 100 words)")
-    elif word_count < 200:
-        score -= 10
-        issues.append("Resume is relatively short (< 200 words)")
-
-    # Check for excessive special characters (possible formatting issues)
     special_chars = len(re.findall(r'[|●■□►▶◆★☆✓✔✗✘]', resume_text))
     if special_chars > 30:
-        score -= 10
-        issues.append(f"High use of special characters ({special_chars}) may confuse ATS parsers")
+        fmt -= 5
+        issues.append(f"High special-character use ({special_chars}) may confuse ATS parsers (-5 format)")
 
-    # Check if text is coherent (not just a list of special chars)
     if len(resume_text.strip()) < 50:
-        score -= 30
-        issues.append("Very little text extracted — possible image-only resume or scan")
+        return 0.0, ["Very little text extracted — possible image-only resume or scan"]
 
-    return max(0.0, round(score, 1)), issues
+    if not (job_description or "").strip():
+        scaled = round(fmt / 40 * 100, 1)
+        issues.append("No job description given — JD fit not scored")
+        return max(0.0, scaled), issues
+
+    # ── B. JD skill coverage (35) ─────────────────────────────────
+    matched, missing = detect_skills(resume_text, job_description)
+    jd_skills = matched + missing
+    if jd_skills:
+        coverage = len(matched) / len(jd_skills)
+        skill_pts = round(coverage * 35)
+        lost = 35 - skill_pts
+        if lost > 0:
+            shown = ", ".join(missing[:6]) + ("..." if len(missing) > 6 else "")
+            issues.append(
+                f"Only {len(matched)} of {len(jd_skills)} job skills found in resume (-{lost} skills): missing {shown}"
+            )
+    else:
+        skill_pts = 17
+        issues.append("JD lists no standard detectable skills — half skill points (-18 skills)")
+
+    # ── C. JD keyword overlap (25) ────────────────────────────────
+    stop = {
+        "the", "and", "for", "with", "you", "your", "our", "are", "have", "has",
+        "will", "from", "that", "this", "role", "job", "work", "team", "ability",
+        "strong", "plus", "including", "such", "more", "than", "into", "over",
+        "all", "any", "can", "who", "what", "when", "where", "how", "why",
+        "looking", "join", "help", "make", "use", "using", "used", "day",
+    }
+    freq: dict[str, int] = {}
+    for w in re.findall(r"[a-z][a-z0-9+#.\-]{2,}", job_description.lower()):
+        w = w.strip(".-")
+        if len(w) >= 3 and w not in stop:
+            freq[w] = freq.get(w, 0) + 1
+    top_terms = sorted(freq, key=freq.get, reverse=True)[:60]
+    if top_terms:
+        hits = [t for t in top_terms if t in text_lower]
+        overlap = len(hits) / len(top_terms)
+        kw_pts = round(overlap * 25)
+        lost = 25 - kw_pts
+        if lost > 0:
+            sample = ", ".join([t for t in top_terms if t not in text_lower][:6])
+            issues.append(
+                f"Only {round(overlap * 100)}% of job keywords appear in resume (-{lost} keywords)"
+                + (f": e.g. {sample}" if sample else "")
+            )
+    else:
+        kw_pts = 12
+        issues.append("JD has too few distinctive keywords — half keyword points (-13 keywords)")
+
+    total = round(fmt + skill_pts + kw_pts, 1)
+    return max(0.0, min(100.0, total)), issues
 
 
 # ─────────────────────────────────────────────────────────────────────────────

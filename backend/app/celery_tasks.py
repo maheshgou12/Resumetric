@@ -66,7 +66,7 @@ def run_analysis_task(self, analysis_id: str):
 
                 # Run scoring
                 match_score = compute_match_score(analysis.resume_text, analysis.job_description)
-                ats_score, ats_issues = compute_ats_score(analysis.resume_text)
+                ats_score, ats_issues = compute_ats_score(analysis.resume_text, analysis.job_description)
                 matched_skills, missing_skills = detect_skills(analysis.resume_text, analysis.job_description)
 
                 # LLM feedback

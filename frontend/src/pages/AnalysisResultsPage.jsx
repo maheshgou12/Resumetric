@@ -7,6 +7,39 @@ import {
 } from 'recharts'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+
+// ─── Chat markdown (point-wise, structured, theme-styled) ───────────────────
+const mdBase = { fontSize: '0.875rem', lineHeight: 1.65, color: '#cbd5e1', overflowWrap: 'anywhere' }
+function CoachMarkdown({ text }) {
+  return (
+    <div style={mdBase}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', margin: '0.6rem 0 0.35rem' }}>{children}</div>,
+          h2: ({ children }) => <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f1f5f9', margin: '0.6rem 0 0.35rem' }}>{children}</div>,
+          h3: ({ children }) => <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#a5b4fc', margin: '0.6rem 0 0.35rem' }}>{children}</div>,
+          h4: ({ children }) => <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#a5b4fc', margin: '0.5rem 0 0.3rem' }}>{children}</div>,
+          p: ({ children }) => <div style={{ margin: '0 0 0.45rem' }}>{children}</div>,
+          strong: ({ children }) => <strong style={{ color: '#f1f5f9' }}>{children}</strong>,
+          ul: ({ children }) => <ul style={{ margin: '0.15rem 0 0.55rem', paddingLeft: '1.15rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>{children}</ul>,
+          ol: ({ children }) => <ol style={{ margin: '0.15rem 0 0.55rem', paddingLeft: '1.15rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>{children}</ol>,
+          li: ({ children }) => <li style={{ paddingLeft: '0.15rem' }}>{children}</li>,
+          hr: () => <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '0.6rem 0' }} />,
+          code: ({ children }) => <code style={{ background: 'rgba(99,102,241,0.15)', color: '#c7d2fe', padding: '0.1rem 0.35rem', borderRadius: '0.3rem', fontSize: '0.8rem' }}>{children}</code>,
+          pre: ({ children }) => <pre style={{ background: 'rgba(0,0,0,0.35)', padding: '0.6rem 0.75rem', borderRadius: '0.5rem', overflowX: 'auto', fontSize: '0.8rem', margin: '0 0 0.55rem' }}>{children}</pre>,
+          table: ({ children }) => <div style={{ overflowX: 'auto', margin: '0 0 0.55rem' }}><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>{children}</table></div>,
+          th: ({ children }) => <th style={{ textAlign: 'left', padding: '0.35rem 0.5rem', background: 'rgba(99,102,241,0.15)', color: '#e0e7ff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{children}</th>,
+          td: ({ children }) => <td style={{ padding: '0.35rem 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', verticalAlign: 'top' }}>{children}</td>,
+          a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" style={{ color: '#a5b4fc' }}>{children}</a>,
+          blockquote: ({ children }) => <div style={{ borderLeft: '3px solid #6366f1', paddingLeft: '0.7rem', margin: '0 0 0.5rem', color: '#94a3b8' }}>{children}</div>,
+        }}
+      >{text}</ReactMarkdown>
+    </div>
+  )
+}
 
 // ─── Score Ring ────────────────────────────────────────────────────────────
 function ScoreRing({ score, label, color, size = 120 }) {
@@ -130,7 +163,7 @@ function ChatPanel({ analysisId }) {
               borderBottomRightRadius: msg.role === 'user' ? '0.25rem' : '1rem',
               borderBottomLeftRadius: msg.role === 'assistant' ? '0.25rem' : '1rem',
             }}>
-              {msg.text}
+              {msg.role === 'assistant' ? <CoachMarkdown text={msg.text} /> : msg.text}
             </div>
           </div>
         ))}

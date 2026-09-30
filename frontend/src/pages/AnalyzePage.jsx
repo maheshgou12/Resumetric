@@ -71,7 +71,7 @@ export default function AnalyzePage() {
     }
   }
 
-  const remainingAnalyses = (user?.monthly_limit || 5) - (user?.analyses_this_month || 0)
+  const usedThisMonth = user?.analyses_this_month || 0
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '2.5rem 1.5rem', flex: 1 }}>
@@ -89,14 +89,13 @@ export default function AnalyzePage() {
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
             marginTop: '0.75rem',
-            background: remainingAnalyses <= 1 ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
-            border: `1px solid ${remainingAnalyses <= 1 ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)'}`,
+            background: 'rgba(16,185,129,0.1)',
+            border: '1px solid rgba(16,185,129,0.2)',
             borderRadius: '9999px', padding: '0.375rem 0.875rem',
             fontSize: '0.8125rem', fontWeight: 500,
-            color: remainingAnalyses <= 1 ? '#fcd34d' : '#34d399',
+            color: '#34d399',
           }}>
-            {remainingAnalyses <= 1 ? '⚠️' : '✅'}
-            {remainingAnalyses} analysis {remainingAnalyses === 1 ? 'remaining' : 'remaining'} this month
+            ✅ {usedThisMonth} {usedThisMonth === 1 ? 'analysis' : 'analyses'} this month • Unlimited
           </div>
         )}
       </div>

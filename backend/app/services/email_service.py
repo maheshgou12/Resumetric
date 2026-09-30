@@ -1,21 +1,56 @@
 """
-Email service using Resend API.
+Email service: Gmail SMTP (any inbox, no domain) preferred, Resend fallback.
 Returns True on real send, False when unconfigured or failed.
 """
 import logging
 import resend
+import smtplib
+from email.message import EmailMessage
 from app.core.config import settings
 
 log = logging.getLogger(__name__)
 
 
-def is_email_configured() -> bool:
+def _smtp_configured() -> bool:
+    return bool(settings.SMTP_USERNAME and settings.SMTP_APP_PASSWORD)
+
+
+def _resend_configured() -> bool:
     return bool(settings.RESEND_API_KEY and settings.EMAIL_FROM)
 
 
+def is_email_configured() -> bool:
+    return _smtp_configured() or _resend_configured()
+
+
+def _send_smtp(to_email: str, subject: str, html: str) -> bool:
+    """Send via Gmail SMTP — works for ANY recipient, no domain needed."""
+    msg = EmailMessage()
+    # Gmail requires From to be the account (or a verified alias), so use SMTP_USERNAME.
+    msg["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.SMTP_USERNAME}>"
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content("Please view this email in an HTML-capable client.")
+    msg.add_alternative(html, subtype="html")
+    try:
+        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as s:
+            s.login(settings.SMTP_USERNAME, settings.SMTP_APP_PASSWORD.replace(" ", ""))
+            s.send_message(msg)
+        return True
+    except Exception as e:
+        log.error("Gmail SMTP send failed to %s: %s", to_email, e)
+        return False
+
+
 def _send(payload: dict) -> bool:
-    if not is_email_configured():
-        log.warning("Email not configured (RESEND_API_KEY/EMAIL_FROM missing) — skipping send to %s", payload.get("to"))
+    to = payload.get("to", [None])[0] if isinstance(payload.get("to"), list) else payload.get("to")
+    if _smtp_configured():
+        ok = _send_smtp(to, payload.get("subject", ""), payload.get("html", ""))
+        if ok:
+            return True
+        log.warning("SMTP failed, trying Resend fallback for %s", to)
+    if not _resend_configured():
+        log.warning("Email not configured (SMTP + Resend both missing) — skipping send to %s", to)
         return False
     resend.api_key = settings.RESEND_API_KEY  # bind per-send, not at import
     try:
@@ -96,6 +131,48 @@ def send_password_reset_email(to_email: str, full_name: str, token: str) -> bool
                 </div>
                 <p style="color: #64748b; font-size: 13px; text-align: center;">
                   If you didn't request this, ignore this email. Your password won't change.
+                </p>
+              </div>
+            </body>
+            </html>
+            """,
+    })
+
+
+def send_google_only_info_email(to_email: str, full_name: str) -> bool:
+    """Tell a Google-signup user they have no password to reset."""
+    login_url = f"{settings.FRONTEND_URL}/login"
+    return _send({
+        "from": f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>",
+        "to": [to_email],
+        "subject": "Your CareerLens AI account uses Google sign-in",
+        "html": f"""
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family: Inter, Arial, sans-serif; background: #0f172a; color: #e2e8f0; padding: 40px;">
+              <div style="max-width: 560px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 40px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                  <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); display: inline-block; padding: 12px 24px; border-radius: 12px; font-size: 20px; font-weight: 700; color: white;">
+                    CareerLens AI
+                  </div>
+                </div>
+                <h1 style="font-size: 24px; font-weight: 700; color: #f8fafc; margin-bottom: 16px;">
+                  Hi {full_name} — no password to reset
+                </h1>
+                <p style="color: #94a3b8; line-height: 1.6; margin-bottom: 32px;">
+                  You asked to reset your password, but your account was created with
+                  <b>Google sign-in</b>, so it has no password. Just click below and
+                  use the "Continue with Google" button.
+                </p>
+                <div style="text-align: center; margin-bottom: 32px;">
+                  <a href="{login_url}"
+                     style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px 32px;
+                            border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
+                    Go to Login
+                  </a>
+                </div>
+                <p style="color: #64748b; font-size: 13px; text-align: center;">
+                  If this wasn't you, ignore this email.
                 </p>
               </div>
             </body>

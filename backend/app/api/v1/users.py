@@ -107,6 +107,6 @@ async def get_user_stats(
         "avg_ats_score": round(avg_ats, 1),
         "best_match_score": max((a.match_score for a in completed), default=0),
         "analyses_this_month": current_user.analyses_this_month,
-        "monthly_limit": settings.FREE_TIER_ANALYSES_PER_MONTH,
+        "monthly_limit": None,  # unlimited analyses per account
         "trend": trend,
     }

@@ -222,7 +222,7 @@ async def job_compare(
     entities = extract_entities(resume_text)
     gap = compare_with_job(entities.get("skills", []), jd, COMMON_SKILLS)
     match = compute_match_score(resume_text, jd)
-    ats, issues = compute_ats_score(resume_text)
+    ats, issues = compute_ats_score(resume_text, jd)
     matched, missing = detect_skills(resume_text, jd)
     return {"match_score": match, "ats_score": ats, "ats_issues": issues,
             "gap": gap, "matched": matched, "missing": missing,

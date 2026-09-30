@@ -14,7 +14,7 @@ export function TermsPage() {
       <h2 style={h2}>2. Your content</h2>
       <p style={p}>You keep ownership of resumes you upload. You grant us permission to process them to provide analysis, PDF reports, and history. Do not upload resumes that are not yours or contain sensitive data you are not allowed to share.</p>
       <h2 style={h2}>3. Fair use</h2>
-      <p style={p}>Free accounts are limited to 5 analyses per month. Automated scraping, bulk uploads, or API abuse may lead to suspension.</p>
+      <p style={p}>Every account gets unlimited resume analyses. Automated scraping, bulk uploads, or API abuse may still lead to suspension.</p>
       <h2 style={h2}>4. Accounts</h2>
       <p style={p}>You are responsible for keeping your password confidential and for activity under your account. Verify your email to use all features.</p>
       <h2 style={h2}>5. Liability</h2>

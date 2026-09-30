@@ -95,7 +95,7 @@ async def _run_analysis_inline(analysis_id: str, user_id: str):
             await db.commit()
 
             match_score = compute_match_score(analysis.resume_text, analysis.job_description)
-            ats_score, ats_issues = compute_ats_score(analysis.resume_text)
+            ats_score, ats_issues = compute_ats_score(analysis.resume_text, analysis.job_description)
             matched_skills, missing_skills = detect_skills(analysis.resume_text, analysis.job_description)
 
             feedback = await asyncio.to_thread(
@@ -197,7 +197,7 @@ async def create_analysis(
     if not job_description.strip():
         raise HTTPException(status_code=400, detail="Job description is required")
 
-    # Rate limiting check
+    # Usage tracking (no monthly cap — unlimited analyses per account)
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
     if (
@@ -206,15 +206,6 @@ async def create_analysis(
     ):
         current_user.analyses_this_month = 0
         current_user.analyses_month_reset = now
-
-    if (
-        current_user.role.value != "admin"
-        and current_user.analyses_this_month >= settings.FREE_TIER_ANALYSES_PER_MONTH
-    ):
-        raise HTTPException(
-            status_code=429,
-            detail=f"Monthly analysis limit ({settings.FREE_TIER_ANALYSES_PER_MONTH}) reached. Upgrade to continue."
-        )
 
     # Extract text
     try:
@@ -410,7 +401,15 @@ Resume excerpt (first 1000 chars): {(analysis.resume_text or '')[:1000]}
 
 Job Description excerpt (first 500 chars): {analysis.job_description[:500]}
 
-Help the user improve their resume with specific, actionable suggestions. Be concise and direct."""
+Help the user improve their resume with specific, actionable suggestions.
+
+FORMAT RULES (must follow):
+- Use short sections with ### headings (max 4 words each).
+- Use bullet (-) or numbered (1.) lists for every point — never walls of text.
+- Keep each bullet to 1-2 lines. Bold the key term at the start of each bullet.
+- Use a markdown table ONLY when comparing before/after or listing sections.
+- NEVER use --- dividers, *** marks, or more than one blank line in a row.
+- Start with a one-line verdict, then the points. End with the single most important next step."""
 
     response = client.chat.completions.create(
         model=settings.GROQ_MODEL,

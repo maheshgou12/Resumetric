@@ -16,7 +16,7 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, EmailStr, field_validator
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -41,6 +41,7 @@ from app.models.models import (
 from app.services.email_service import (
     send_verification_email,
     send_password_reset_email,
+    send_google_only_info_email,
     is_email_configured,
 )
 import logging
@@ -57,6 +58,14 @@ REFRESH_COOKIE_NAME = "refresh_token"
 # (Resets on restart — use Redis in production for multi-worker.)
 _FORGOT_LAST_HIT: dict[str, float] = {}
 _FORGOT_COOLDOWN_S = 60
+
+
+async def _users_by_email(db: AsyncSession, email: str) -> list:
+    """Case-insensitive email lookup — 'User@x.com' and 'user@x.com' are the same account."""
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == (email or "").strip().lower())
+    )
+    return list(result.scalars().all())
 
 
 @router.get("/email-status")
@@ -206,16 +215,12 @@ async def register(
     db: AsyncSession = Depends(get_db),
 ):
     # --------------------------------------------------------
-    # Check existing email
+    # Check existing email (case-insensitive)
     # --------------------------------------------------------
 
-    result = await db.execute(
-        select(User).where(User.email == body.email)
-    )
+    existing_users = await _users_by_email(db, body.email)
 
-    existing_user = result.scalar_one_or_none()
-
-    if existing_user:
+    if existing_users:
         raise HTTPException(
             status_code=400,
             detail="Email already registered",
@@ -226,7 +231,7 @@ async def register(
     # --------------------------------------------------------
 
     user = User(
-        email=body.email,
+        email=body.email.strip(),
         full_name=body.full_name,
         hashed_password=get_password_hash(body.password),
         is_verified=False,
@@ -334,59 +339,35 @@ async def login(
     """
 
     # --------------------------------------------------------
-    # Find user
+    # Find user (case-insensitive — try every password match)
     # --------------------------------------------------------
 
-    result = await db.execute(
-        select(User).where(
-            User.email == body.email
-        )
-    )
+    candidates = await _users_by_email(db, body.email)
 
-    user = result.scalar_one_or_none()
+    user = None
+    for c in candidates:
+        if not c.hashed_password:
+            continue
+        try:
+            if verify_password(body.password, c.hashed_password):
+                user = c
+                break
+        except Exception as e:
+            print(f"[auth] Password verification error: {e}")
 
     # --------------------------------------------------------
-    # User doesn't exist
+    # No password matched
     # --------------------------------------------------------
 
     if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-        )
-
-    # --------------------------------------------------------
-    # User has no password
-    #
-    # This can happen for Google-only accounts.
-    # --------------------------------------------------------
-
-    if not user.hashed_password:
-        raise HTTPException(
-            status_code=401,
-            detail=(
-                "This account does not have a password. "
-                "Please use Google login."
-            ),
-        )
-
-    # --------------------------------------------------------
-    # Verify password
-    # --------------------------------------------------------
-
-    try:
-        password_valid = verify_password(
-            body.password,
-            user.hashed_password,
-        )
-    except Exception as e:
-        print(
-            f"[auth] Password verification error: {e}"
-        )
-
-        password_valid = False
-
-    if not password_valid:
+        if any(not c.hashed_password for c in candidates):
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "This account does not have a password. "
+                    "Please use Google login."
+                ),
+            )
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password",
@@ -513,13 +494,9 @@ async def google_login(
 
     if not user:
 
-        result = await db.execute(
-            select(User).where(
-                User.email == email
-            )
-        )
+        matches = await _users_by_email(db, email)
 
-        user = result.scalar_one_or_none()
+        user = matches[0] if matches else None
 
     # --------------------------------------------------------
     # Create new Google user
@@ -528,7 +505,7 @@ async def google_login(
     if not user:
 
         user = User(
-            email=email,
+            email=email.strip(),
             full_name=name,
             google_id=google_id,
             avatar_url=avatar,
@@ -805,74 +782,80 @@ async def forgot_password(
         }
     _FORGOT_LAST_HIT[key] = now
 
-    result = await db.execute(
-        select(User).where(
-            User.email == body.email
-        )
-    )
+    # Case-insensitive: ALL accounts with this email get mail —
+    # password accounts get a reset link, Google-only accounts get
+    # a "use Google login" info mail. Unknown emails stay silent (200).
+    users = await _users_by_email(db, body.email)
 
-    user = result.scalar_one_or_none()
+    for user in users:
+        if user.hashed_password:
 
-    if user and user.hashed_password:
+            # ------------------------------------------------
+            # Generate secure reset token
+            # ------------------------------------------------
 
-        # ----------------------------------------------------
-        # Generate secure reset token
-        # ----------------------------------------------------
+            token = secrets.token_urlsafe(32)
 
-        token = secrets.token_urlsafe(32)
+            expires_at = (
+                datetime.now(timezone.utc)
+                + timedelta(minutes=15)
+            )
 
-        expires_at = (
-            datetime.now(timezone.utc)
-            + timedelta(minutes=15)
-        )
+            password_reset = PasswordReset(
+                user_id=user.id,
+                token=token,
+                expires_at=expires_at,
+                is_used=False,
+            )
 
-        password_reset = PasswordReset(
-            user_id=user.id,
-            token=token,
-            expires_at=expires_at,
-            is_used=False,
-        )
+            db.add(password_reset)
 
-        db.add(password_reset)
+            await db.commit()
 
-        await db.commit()
+            # ------------------------------------------------
+            # Send REAL reset email via Resend (when configured)
+            # ------------------------------------------------
 
-        # ----------------------------------------------------
-        # Send REAL email via Resend (when configured)
-        # ----------------------------------------------------
+            sent = send_password_reset_email(
+                user.email,
+                user.full_name,
+                token,
+            )
+            if sent:
+                log.info("Password reset email sent to %s", user.email)
+            else:
+                log.warning(
+                    "Password reset email NOT sent to %s "
+                    "(Resend unconfigured — see server log link below)",
+                    user.email,
+                )
 
-        sent = send_password_reset_email(
-            body.email,
-            user.full_name,
-            token,
-        )
-        if sent:
-            log.info("Password reset email sent to %s", body.email)
+            # ------------------------------------------------
+            # Local fallback: print link to server log
+            # ------------------------------------------------
+
+            if not is_email_configured():
+
+                reset_url = (
+                    f"{settings.FRONTEND_URL}"
+                    f"/reset-password?token={token}"
+                )
+
+                print("\n" + "=" * 70)
+                print("[LOCAL PASSWORD RESET — Resend not configured]")
+                print(f"Email: {user.email}")
+                print(f"Reset URL: {reset_url}")
+                print("Expires in: 15 minutes")
+                print("To send REAL mail: set RESEND_API_KEY + EMAIL_FROM in backend/.env")
+                print("=" * 70 + "\n")
+
         else:
-            log.warning(
-                "Password reset email NOT sent to %s "
-                "(Resend unconfigured — see server log link below)",
-                body.email,
+            # Google-only account — tell them there is no password
+            mailed = send_google_only_info_email(user.email, user.full_name)
+            log.info(
+                "Google-only reset info mail to %s: %s", user.email,
+                "sent" if mailed else "skipped (Resend unconfigured)",
             )
-
-        # ----------------------------------------------------
-        # Local development fallback: print link to server log
-        # ----------------------------------------------------
-
-        if not is_email_configured():
-
-            reset_url = (
-                f"{settings.FRONTEND_URL}"
-                f"/reset-password?token={token}"
-            )
-
-            print("\n" + "=" * 70)
-            print("[LOCAL PASSWORD RESET — Resend not configured]")
-            print(f"Email: {body.email}")
-            print(f"Reset URL: {reset_url}")
-            print("Expires in: 15 minutes")
-            print("To send REAL mail: set RESEND_API_KEY + EMAIL_FROM in backend/.env")
-            print("=" * 70 + "\n")
 
     return {
         "message": (
