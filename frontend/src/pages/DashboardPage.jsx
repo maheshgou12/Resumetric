@@ -127,8 +127,8 @@ export default function DashboardPage() {
             icon: '🏆', color: '#ec4899',
           },
           {
-            label: 'This Month',
-            value: statsLoading ? '—' : `${stats?.analyses_this_month ?? 0} • Unlimited`,
+            label: 'Analyses',
+            value: 'Unlimited',
             icon: '📅', color: '#8b5cf6',
           },
         ].map(card => (

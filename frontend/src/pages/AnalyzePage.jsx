@@ -71,8 +71,6 @@ export default function AnalyzePage() {
     }
   }
 
-  const usedThisMonth = user?.analyses_this_month || 0
-
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '2.5rem 1.5rem', flex: 1 }}>
       {/* Header */}
@@ -95,7 +93,7 @@ export default function AnalyzePage() {
             fontSize: '0.8125rem', fontWeight: 500,
             color: '#34d399',
           }}>
-            ✅ {usedThisMonth} {usedThisMonth === 1 ? 'analysis' : 'analyses'} this month • Unlimited
+            ✅ Unlimited analyses
           </div>
         )}
       </div>
