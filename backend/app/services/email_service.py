@@ -1,14 +1,21 @@
 """
-Email service: Gmail SMTP (any inbox, no domain) preferred, Resend fallback.
+Email service: Brevo HTTPS (any inbox, Render-proof) > Gmail SMTP (local) > Resend (fallback).
 Returns True on real send, False when unconfigured or failed.
 """
+import json
 import logging
+import urllib.request
+import urllib.error
 import resend
 import smtplib
 from email.message import EmailMessage
 from app.core.config import settings
 
 log = logging.getLogger(__name__)
+
+
+def _brevo_configured() -> bool:
+    return bool(settings.BREVO_API_KEY and settings.BREVO_SENDER_EMAIL)
 
 
 def _smtp_configured() -> bool:
@@ -20,7 +27,33 @@ def _resend_configured() -> bool:
 
 
 def is_email_configured() -> bool:
-    return _smtp_configured() or _resend_configured()
+    return _brevo_configured() or _smtp_configured() or _resend_configured()
+
+
+def _send_brevo(to_email: str, subject: str, html: str) -> bool:
+    """Send via Brevo HTTPS API — any recipient, no domain, no SMTP ports."""
+    payload = {
+        "sender": {"name": settings.EMAIL_FROM_NAME, "email": settings.BREVO_SENDER_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html,
+    }
+    req = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=json.dumps(payload).encode(),
+        method="POST",
+        headers={"accept": "application/json", "api-key": settings.BREVO_API_KEY,
+                 "content-type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return 200 <= r.status < 300
+    except urllib.error.HTTPError as e:
+        log.error("Brevo send failed to %s: %s %s", to_email, e.code, e.read().decode()[:200])
+        return False
+    except Exception as e:
+        log.error("Brevo send failed to %s: %s", to_email, e)
+        return False
 
 
 def _send_smtp(to_email: str, subject: str, html: str) -> bool:
@@ -44,9 +77,13 @@ def _send_smtp(to_email: str, subject: str, html: str) -> bool:
 
 def _send(payload: dict) -> bool:
     to = payload.get("to", [None])[0] if isinstance(payload.get("to"), list) else payload.get("to")
+    subject, html = payload.get("subject", ""), payload.get("html", "")
+    if _brevo_configured():
+        if _send_brevo(to, subject, html):
+            return True
+        log.warning("Brevo failed, trying SMTP fallback for %s", to)
     if _smtp_configured():
-        ok = _send_smtp(to, payload.get("subject", ""), payload.get("html", ""))
-        if ok:
+        if _send_smtp(to, subject, html):
             return True
         log.warning("SMTP failed, trying Resend fallback for %s", to)
     if not _resend_configured():

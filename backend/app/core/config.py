@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "noreply@resumeanalyzerpro.com"
     EMAIL_FROM_NAME: str = "Resume Analyzer Pro"
 
+    # Email via Brevo HTTPS API (delivers to ANY inbox, no domain needed,
+    # works on hosts that block SMTP ports). Sender must be verified in Brevo.
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = ""
+
     # Email via Gmail SMTP (delivers to ANY inbox, no domain needed).
     # Create an App Password at myaccount.google.com/apppasswords (needs 2-Step Verification).
     SMTP_HOST: str = "smtp.gmail.com"
