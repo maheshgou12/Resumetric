@@ -1,227 +1,103 @@
-# ⚡ Resume Analyzer Pro
+# ⚡ CareerLens AI — Resumetric
 
-> AI-powered resume analysis platform — match score, ATS compatibility, missing skills, personalized coaching, PDF reports, and more.
+> AI-powered resume & career intelligence: JD-aware match + ATS scores, skills gaps, rewrite coaching, cover letters, roadmaps, interview prep, PDF reports — unlimited analyses for every account.
 
-[![CI/CD](https://github.com/yourusername/resume-analyzer-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/resume-analyzer-pro/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
-
----
-
-## 🚀 Live Demo
-
-| Service | URL |
-|---------|-----|
-| Frontend | `https://resume-analyzer-pro.vercel.app` |
-| Backend API | `https://resume-analyzer-api.onrender.com` |
-| API Docs | `https://resume-analyzer-api.onrender.com/docs` |
-| Health Check | `https://resume-analyzer-api.onrender.com/health` |
+**Live app:** https://resumetric-challengers13.vercel.app
+**API:** https://resumetric-rus3.onrender.com · **Docs:** https://resumetric-rus3.onrender.com/docs · **Health:** https://resumetric-rus3.onrender.com/health
 
 ---
 
 ## ✨ Features
 
-### Core
-- **AI Match Score** — TF-IDF cosine similarity between resume and job description (0–100%)
-- **ATS Compatibility Score** — Checks section headers, contact info, formatting issues
-- **Skills Gap Analysis** — Detects 60+ skills, shows matched vs. missing
-- **LLM Feedback** — Groq (llama-3.3-70b) generates strengths, weaknesses, rewrite tips
-- **PDF Report** — Professional ReportLab PDF with all scores and recommendations
-- **Email Delivery** — Resend API delivers report to user's inbox automatically
+### Analysis (unlimited per account)
+- **AI Match Score** — TF-IDF cosine similarity between resume and job description
+- **JD-aware ATS Score** — format (40) + JD skill coverage (35) + JD keyword overlap (25), with point-wise reasons
+- **Skills Gap** — 75+ detected skills, matched vs missing, learning roadmap with free resources
+- **LLM Feedback** — Groq (`openai/gpt-oss-120b`): verdict, strengths, weaknesses, priority action
+- **AI Rewrite Coach** — chat with resume + JD context, structured markdown replies
+- **Cover Letter Generator** — one-click tailored letter
+- **PDF Report** — ReportLab report with scores, skills, roadmap
+- **100-pt Resume Score + Career Domains** — offline heuristic, 10 domains ranked by fit
+- **Interview Prep** — domain questions + STAR tips · **Progress trends** · **Resume library** (versions, compare, re-analyze)
 
-### Authentication
-- Email + password with strength enforcement
-- Email verification (account soft-verified on signup, banner until confirmed)
-- Google OAuth via Google Identity Services (verified server-side)
-- JWT access tokens (30 min) + httpOnly cookie refresh tokens (7 days)
-- Refresh token rotation with server-side revocation
-- Forgot/reset password with 15-minute single-use tokens
-
-### Dashboards
-- **User Dashboard** — Analysis history table, match/ATS trend line chart
-- **Admin Dashboard** — Platform stats, top missing skills bar chart, signup trend, searchable analysis/user tables
-
-### Advanced
-- **AI Rewrite Coach** — Chat panel backed by Groq LLM with resume + JD context
-- **Cover Letter Generator** — One-click tailored cover letter
-- **Skill Roadmap** — Curated free resources for each missing skill
-- **Rate Limiting** — 5 free analyses/month per user, enforced server-side
+### Accounts & mail (per-user, any inbox)
+- Email + password (bcrypt, strength rules, case-insensitive) and Google OAuth (server-verified)
+- JWT access (30 min) + rotating httpOnly refresh cookies (7 days)
+- Email verification, forgot/reset password (15-min single-use tokens, anti-enumeration, 60s throttle)
+- Mail via Brevo HTTPS API (any inbox) → Gmail SMTP → Resend fallback
+- User dashboard (history, stats, trends) + admin dashboard (platform stats, missing skills, user search)
 
 ---
 
-## 🏗️ Tech Stack
+## 🛠️ Run locally
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19 + Vite, Tailwind CSS v4, React Router v7, Recharts, Axios |
-| Backend | FastAPI (Python 3.11), SQLAlchemy 2.0 async, Pydantic v2 |
-| Database | PostgreSQL (Neon/Render) |
-| File Storage | Cloudflare R2 / AWS S3 (boto3) |
-| Auth | JWT + httpOnly cookie, passlib/bcrypt, Google Identity Services |
-| Email | Resend API |
-| AI | Groq API (llama-3.3-70b), scikit-learn TF-IDF |
-| PDF | ReportLab |
-| Background | Celery + Redis |
-| Hosting | Vercel (frontend) + Render (backend) |
-| CI/CD | GitHub Actions |
-| Monitoring | Sentry + UptimeRobot |
-
----
-
-## 🛠️ Local Development
-
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- Docker + Docker Compose (for PostgreSQL + Redis)
-
-### 1. Clone & configure
+Prerequisites: Python 3.11+, Node.js 20+.
 
 ```bash
-git clone https://github.com/yourusername/resume-analyzer-pro.git
-cd resume-analyzer-pro
-
-# Backend config
-cp backend/.env.example backend/.env
-# Edit backend/.env with your API keys
-
-# Frontend config
-cp frontend/.env.example frontend/.env.local
-# Edit frontend/.env.local
-```
-
-### 2. Start services (DB + Redis)
-
-```bash
-docker compose up postgres redis -d
-```
-
-### 3. Start the backend
-
-```bash
+# Backend
 cd backend
 pip install -r requirements.txt
-uvicorn main:app --reload
-# API running at http://localhost:8000
-# Docs at http://localhost:8000/docs
-```
+cp .env.example .env   # fill GROQ_API_KEY + mail keys (see below)
+python -m uvicorn main:app --reload   # http://127.0.0.1:8000, docs at /docs
 
-### 4. Start Celery worker (optional, for async analysis)
-
-```bash
-cd backend
-celery -A app.celery_tasks worker --loglevel=info -Q analysis,email
-```
-
-### 5. Start the frontend
-
-```bash
+# Frontend (second terminal)
 cd frontend
 npm install
-npm run dev
-# App running at http://localhost:5173
+npm run dev                       # http://localhost:5173
 ```
 
----
+Local defaults need zero setup: SQLite database auto-creates, analysis runs inline (no Redis needed).
 
-## 🔑 Required Environment Variables
+### Minimal `.env` for full local features
 
-### Backend (`backend/.env`)
+| Key | Get it at | Enables |
+|---|---|---|
+| `GROQ_API_KEY` | console.groq.com | AI feedback, chat, cover letters |
+| `BREVO_API_KEY` + `BREVO_SENDER_EMAIL` | brevo.com (verify sender, no domain needed) | Real mail to any inbox |
+| `GOOGLE_CLIENT_ID` (+ secret) | Google Cloud Console | Continue-with-Google (`http://localhost:5173` in JS origins) |
+| `SMTP_USERNAME` + `SMTP_APP_PASSWORD` | myaccount.google.com/apppasswords | Local mail fallback |
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | ✅ |
-| `JWT_SECRET_KEY` | Random 256-bit string | ✅ |
-| `SECRET_KEY` | App secret key | ✅ |
-| `GROQ_API_KEY` | [groq.com](https://console.groq.com) API key | ✅ |
-| `RESEND_API_KEY` | [resend.com](https://resend.com) API key | ✅ |
-| `S3_ACCESS_KEY_ID` | Cloudflare R2 or AWS S3 | ✅ |
-| `S3_SECRET_ACCESS_KEY` | S3 secret | ✅ |
-| `S3_BUCKET_NAME` | S3/R2 bucket name | ✅ |
-| `S3_ENDPOINT_URL` | R2 endpoint URL (omit for AWS) | R2 only |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID | For Google Login |
-| `REDIS_URL` | Redis connection URL | For Celery |
-| `SENTRY_DSN` | Sentry project DSN | Optional |
-| `FRONTEND_URL` | Frontend URL for email links | ✅ |
-
-### Frontend (`frontend/.env.local`)
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_URL` | Backend URL (use `/api/v1` with Vite proxy) |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID |
+Without mail keys, reset/verify links print to the backend console (dev mode).
 
 ---
 
-## 🚀 Deployment
+## 🏗️ Tech stack
 
-### Frontend → Vercel
+| Layer | Tech |
+|---|---|
+| Frontend | React 19 + Vite, Tailwind v4, Router v7, React Query, Recharts, Axios, react-markdown |
+| Backend | FastAPI, SQLAlchemy 2 async, Pydantic v2, bcrypt/JWT, Groq, scikit-learn, ReportLab |
+| Data | SQLite (local) / PostgreSQL (prod, asyncpg) |
+| Mail | Brevo HTTPS → Gmail SMTP → Resend |
+| Deploy | Vercel (frontend) + Render + Render Postgres (backend) |
 
-1. Import GitHub repo in [vercel.com](https://vercel.com)
-2. Set root directory to `frontend`
-3. Add env vars: `VITE_API_URL=https://your-api.onrender.com/api/v1`, `VITE_GOOGLE_CLIENT_ID`
-4. Deploy — Vercel handles SPA routing via `vercel.json`
-
-### Backend → Render
-
-1. Connect GitHub repo in [render.com](https://render.com)
-2. Create a **Web Service** pointing to `backend/`
-3. Build: `pip install -r requirements.txt`
-4. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-5. Add all environment variables in the Render dashboard
-6. Set up a **PostgreSQL** database on Render/Neon and link the connection string
-
-### Auto-deploy (CI/CD)
-
-Add these secrets to your GitHub repo:
-- `RENDER_DEPLOY_HOOK_URL` — from Render's deploy hooks
-- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — from Vercel
-
-### Monitoring
-
-- Add `/health` endpoint URL to [UptimeRobot](https://uptimerobot.com) with 10-min interval to prevent cold starts
-- Add `SENTRY_DSN` to backend environment for error tracking
-
----
-
-## 📁 Project Structure
+## 📁 Structure
 
 ```
-resume-analyzer/
-├── .github/workflows/ci.yml    # GitHub Actions CI/CD
-├── docker-compose.yml          # Local dev services
-├── frontend/
-│   ├── src/
-│   │   ├── components/         # Navbar, GoogleButton, ProtectedRoute
-│   │   ├── context/            # AuthContext (auth state)
-│   │   ├── lib/                # Axios client with token refresh
-│   │   └── pages/              # All page components
-│   ├── vercel.json             # Vercel SPA config
-│   └── vite.config.js          # Vite + Tailwind config
-└── backend/
-    ├── app/
-    │   ├── api/v1/             # FastAPI routes (auth, analysis, users, admin)
-    │   ├── core/               # Config, database, security, deps
-    │   ├── models/             # SQLAlchemy models
-    │   └── services/           # AI engine, PDF, email, S3, resume parser
-    ├── main.py                 # FastAPI app entry point
-    ├── Dockerfile              # Backend container
-    └── requirements.txt        # Python dependencies
+├── render.yaml            # Render blueprint (backend + database)
+├── vercel.json            # SPA rewrites + security headers
+├── docker-compose.yml     # Local Postgres + Redis (optional)
+├── backend/
+│   ├── main.py            # App entry, CORS, /health
+│   ├── app/api/v1/        # auth, analysis, career, users, admin
+│   ├── app/core/          # config (env-driven), database, security, guards
+│   ├── app/models/        # User, Analysis, Resume, tokens
+│   └── app/services/      # scoring engine, parser, PDF, mail, storage
+└── frontend/src/
+    ├── pages/             # 16 pages (landing → dashboards → legal)
+    ├── components/        # Navbar, GoogleButton, ProtectedRoute
+    ├── context/           # Auth state + token refresh
+    └── lib/api.js         # Axios client
 ```
 
----
+## 🚀 Deploy (how this repo is live)
 
-## 🔒 Security Notes
+- **Frontend → Vercel:** import repo, root `frontend/` (repo-root `vercel.json` also works with build `cd frontend && npm run build`, output `frontend/dist`). Env: `VITE_API_URL=https://<api>/api/v1`, `VITE_GOOGLE_CLIENT_ID`.
+- **Backend → Render:** Blueprint/new web service, `rootDir backend`, build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`. Attach Postgres; env: `JWT_SECRET_KEY`, `SECRET_KEY`, `GROQ_API_KEY`, mail keys, `GOOGLE_*`, `FRONTEND_URL` + `ALLOWED_ORIGINS` (= Vercel URL).
+- **Google OAuth for all users:** add the Vercel URL to Authorized JavaScript origins, fill Branding URLs (`/privacy`, `/terms` exist), Publish the app.
 
-- Refresh tokens stored as SHA-256 hashes (never raw)
-- httpOnly cookies prevent XSS token theft
-- Password reset tokens expire in 15 minutes and are single-use
-- Anti-enumeration on forgot-password (always returns 200)
-- File uploads validated by MIME type + extension + size (5MB max)
-- Rate limiting: 5 analyses/month on free tier
-- CORS locked to known origins
+## 🔒 Security notes
 
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE)
+- Refresh tokens stored as SHA-256 hashes; httpOnly cookies; single-use short-lived reset tokens
+- Case-insensitive email identity; Google-only accounts get guidance mail instead of silent failure
+- Uploads validated (type + 5MB); naive-UTC datetimes for Postgres compatibility; secrets never committed (see `.gitignore`)
