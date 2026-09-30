@@ -1,7 +1,17 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
+from datetime import datetime, timezone
 from app.core.config import settings
+
+
+def utcnow_naive() -> datetime:
+    """UTC now WITHOUT tzinfo — matches TIMESTAMP WITHOUT TIME ZONE columns.
+
+    SQLite tolerates aware datetimes but Postgres+asyncpg rejects them,
+    so every DB write must use this helper.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _make_engine():

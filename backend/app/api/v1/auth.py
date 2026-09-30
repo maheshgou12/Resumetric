@@ -20,7 +20,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import get_db, utcnow_naive
 from app.core.deps import get_current_user
 from app.core.security import (
     verify_password,
@@ -251,7 +251,7 @@ async def register(
         user_id=user.id,
         token=verification_token,
         expires_at=(
-            datetime.now(timezone.utc)
+            utcnow_naive()
             + timedelta(hours=24)
         ),
         is_used=False,
@@ -797,7 +797,7 @@ async def forgot_password(
             token = secrets.token_urlsafe(32)
 
             expires_at = (
-                datetime.now(timezone.utc)
+                utcnow_naive()
                 + timedelta(minutes=15)
             )
 
@@ -1010,7 +1010,7 @@ async def resend_verification(
         user_id=current_user.id,
         token=token,
         expires_at=(
-            datetime.now(timezone.utc)
+            utcnow_naive()
             + timedelta(hours=24)
         ),
         is_used=False,

@@ -198,12 +198,13 @@ async def create_analysis(
         raise HTTPException(status_code=400, detail="Job description is required")
 
     # Usage tracking (no monthly cap — unlimited analyses per account)
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
-    if (
-        current_user.analyses_month_reset is None
-        or current_user.analyses_month_reset.replace(tzinfo=timezone.utc).month != now.month
-    ):
+    from datetime import timezone
+    from app.core.database import utcnow_naive
+    now = utcnow_naive()
+    reset = current_user.analyses_month_reset
+    if reset is not None and reset.tzinfo is not None:
+        reset = reset.replace(tzinfo=None)
+    if reset is None or reset.month != now.month or reset.year != now.year:
         current_user.analyses_this_month = 0
         current_user.analyses_month_reset = now
 

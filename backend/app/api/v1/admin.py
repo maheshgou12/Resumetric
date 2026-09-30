@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from collections import Counter, defaultdict
 
-from app.core.database import get_db
+from app.core.database import get_db, utcnow_naive
 from app.core.deps import get_current_admin
 from app.models.models import User, Analysis, AnalysisStatus
 
@@ -39,7 +39,7 @@ async def get_admin_stats(
     avg_match, avg_ats = scores.one()
 
     # New users last 30 days (portable: Python-computed cutoff, not NOW()/INTERVAL)
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    cutoff = utcnow_naive() - timedelta(days=30)
     new_users_result = await db.execute(
         select(func.count(User.id)).where(User.created_at >= cutoff)
     )
@@ -86,7 +86,7 @@ async def get_signup_trend(
     _: User = Depends(get_current_admin),
 ):
     """Daily signups for the last N days (grouped in Python — portable)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = utcnow_naive() - timedelta(days=days)
     result = await db.execute(
         select(User.created_at).where(User.created_at >= cutoff)
     )

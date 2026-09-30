@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.config import settings
+from app.core.database import utcnow_naive
 from app.models.models import User, RefreshToken
 
 
@@ -191,7 +192,7 @@ async def store_refresh_token(
     """
 
     expires_at = (
-        datetime.now(timezone.utc)
+        utcnow_naive()
         + timedelta(
             days=settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
