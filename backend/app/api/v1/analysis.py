@@ -1,8 +1,12 @@
 """
 Resume Analysis API routes
 """
+import logging
+import json
 from typing import Optional
 import uuid
+
+log = logging.getLogger(__name__)
 from fastapi import (
     APIRouter, Depends, HTTPException, UploadFile, File, Form,
     BackgroundTasks, status
@@ -393,8 +397,21 @@ async def ai_chat(
     comp_str = analysis.company_name or "Target Company"
     match_val = f"{analysis.match_score:.1f}" if analysis.match_score is not None else "N/A"
     ats_val = f"{analysis.ats_score:.1f}" if analysis.ats_score is not None else "N/A"
+    
     matched_skills = analysis.matched_skills or []
+    if isinstance(matched_skills, str):
+        try:
+            matched_skills = json.loads(matched_skills)
+        except Exception:
+            matched_skills = [s.strip() for s in matched_skills.split(",") if s.strip()]
+
     missing_skills = analysis.missing_skills or []
+    if isinstance(missing_skills, str):
+        try:
+            missing_skills = json.loads(missing_skills)
+        except Exception:
+            missing_skills = [s.strip() for s in missing_skills.split(",") if s.strip()]
+
     user_name = current_user.full_name or "Candidate"
     missing_str = ", ".join(missing_skills[:5]) if missing_skills else "targeted industry keywords"
     matched_str = ", ".join(matched_skills[:5]) if matched_skills else "core technical background"
@@ -403,7 +420,7 @@ async def ai_chat(
     if settings.GROQ_API_KEY:
         try:
             from groq import Groq
-            client = Groq(api_key=settings.GROQ_API_KEY, timeout=5.0, max_retries=0)
+            client = Groq(api_key=settings.GROQ_API_KEY, timeout=7.0, max_retries=0)
             system_prompt = f"""You are CareerLens AI, an expert resume strategist and career coach.
 Candidate Name: {user_name}
 Target Role: {role_str} at {comp_str}
@@ -425,17 +442,28 @@ FORMAT RULES:
 - If recommending bullet points, provide high-impact 'Before' vs 'After' examples with metrics.
 - End with a clear next step."""
 
-            response = client.chat.completions.create(
-                model=settings.GROQ_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": body.message},
-                ],
-                temperature=0.7,
-                max_tokens=800,
-            )
-            if response.choices and response.choices[0].message.content:
-                return {"reply": response.choices[0].message.content.strip()}
+            candidate_models = [settings.GROQ_MODEL, "qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
+            for model_name in candidate_models:
+                if not model_name:
+                    continue
+                try:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": body.message},
+                        ],
+                        temperature=0.7,
+                        max_tokens=800,
+                    )
+                    reply_text = ""
+                    if response.choices:
+                        msg = response.choices[0].message
+                        reply_text = (getattr(msg, "content", None) or getattr(msg, "reasoning", None) or "").strip()
+                    if reply_text:
+                        return {"reply": reply_text}
+                except Exception as m_err:
+                    log.warning("Groq model %s failed: %s", model_name, m_err)
         except Exception as exc:
             log.warning("Groq AI chat call failed: %s; using intelligent fallback coach", exc)
 
@@ -520,15 +548,28 @@ async def generate_cover_letter(
     user_name = current_user.full_name or "Applicant"
     role = analysis.job_title or "Software Developer / Engineer"
     company = analysis.company_name or "your engineering team"
+    
     matched_skills = analysis.matched_skills or []
+    if isinstance(matched_skills, str):
+        try:
+            matched_skills = json.loads(matched_skills)
+        except Exception:
+            matched_skills = [s.strip() for s in matched_skills.split(",") if s.strip()]
+
     missing_skills = analysis.missing_skills or []
+    if isinstance(missing_skills, str):
+        try:
+            missing_skills = json.loads(missing_skills)
+        except Exception:
+            missing_skills = [s.strip() for s in missing_skills.split(",") if s.strip()]
+
     skills_text = ", ".join(matched_skills[:6]) if matched_skills else "software engineering, system architecture, and modern application development"
 
     # Attempt live Groq generation if configured
     if settings.GROQ_API_KEY:
         try:
             from groq import Groq
-            client = Groq(api_key=settings.GROQ_API_KEY, timeout=6.0, max_retries=0)
+            client = Groq(api_key=settings.GROQ_API_KEY, timeout=7.0, max_retries=0)
             prompt = f"""Write a compelling, professional cover letter for this candidate.
 
 Candidate Name: {user_name}
@@ -548,14 +589,25 @@ Requirements:
 - Confident, professional, and engaging tone.
 - Start with "Dear Hiring Manager," and sign off with "Sincerely,\n{user_name}"."""
 
-            response = client.chat.completions.create(
-                model=settings.GROQ_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=1000,
-            )
-            if response.choices and response.choices[0].message.content:
-                return {"cover_letter": response.choices[0].message.content.strip()}
+            candidate_models = [settings.GROQ_MODEL, "qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
+            for model_name in candidate_models:
+                if not model_name:
+                    continue
+                try:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.7,
+                        max_tokens=1000,
+                    )
+                    cl_text = ""
+                    if response.choices:
+                        msg = response.choices[0].message
+                        cl_text = (getattr(msg, "content", None) or getattr(msg, "reasoning", None) or "").strip()
+                    if cl_text:
+                        return {"cover_letter": cl_text}
+                except Exception as m_err:
+                    log.warning("Groq cover letter model %s failed: %s", model_name, m_err)
         except Exception as exc:
             log.warning("Groq cover letter generation failed: %s; using intelligent fallback generator", exc)
 

@@ -77,6 +77,17 @@ services:
       - ./backend:/app
     command: celery -A app.celery_tasks worker --loglevel=info -Q analysis,email
 
+  # ─── React Frontend ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: resume_analyzer_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
   # ─── Flower (Celery Monitor) ───────────────────────────────
   flower:
     build:
