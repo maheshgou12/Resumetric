@@ -51,7 +51,7 @@ class Settings(BaseSettings):
 
     # Groq AI
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "qwen/qwen3.8-27b"
 
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"

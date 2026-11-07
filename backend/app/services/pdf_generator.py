@@ -36,19 +36,21 @@ TEXT_MUTED = colors.HexColor("#94a3b8")
 WHITE = colors.white
 
 
-def score_color(score: float) -> colors.Color:
-    if score >= 75:
+def score_color(score: Optional[float]) -> colors.Color:
+    s = score or 0.0
+    if s >= 75:
         return GREEN
-    elif score >= 50:
+    elif s >= 50:
         return ORANGE
     return RED
 
 
-def score_hex(score: float) -> str:
+def score_hex(score: Optional[float]) -> str:
     """Hex string for <font color> — hexval() returns int, not usable here."""
-    if score >= 75:
+    s = score or 0.0
+    if s >= 75:
         return "#10b981"
-    elif score >= 50:
+    elif s >= 50:
         return "#f59e0b"
     return "#ef4444"
 

@@ -65,7 +65,7 @@ def _send_smtp(to_email: str, subject: str, html: str) -> bool:
     msg["Subject"] = subject
     msg.set_content("Please view this email in an HTML-capable client.")
     msg.add_alternative(html, subtype="html")
-    clean_pw = settings.SMTP_APP_PASSWORD.replace(" ", "").strip()
+    clean_pw = (settings.SMTP_APP_PASSWORD or "").replace(" ", "").strip()
     try:
         if settings.SMTP_PORT == 465:
             with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as s:

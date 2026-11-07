@@ -257,7 +257,13 @@ Respond ONLY with valid JSON in this exact format:
 }}"""
 
     import json
-    models_to_try = [settings.GROQ_MODEL, "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    models_to_try = [
+        settings.GROQ_MODEL,
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-120b",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+    ]
     # De-duplicate while preserving order
     seen = set()
     models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]

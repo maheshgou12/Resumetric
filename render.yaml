@@ -21,7 +21,7 @@ services:
           name: resume-analyzer-db
           property: connectionString
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: qwen/qwen3.8-27b
       - key: EMAIL_FROM_NAME
         value: CareerLens AI
       - key: S3_BUCKET_NAME
