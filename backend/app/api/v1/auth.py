@@ -294,34 +294,11 @@ async def register(
         print("=" * 70 + "\n")
 
     # --------------------------------------------------------
-    # Login immediately after registration
+    # Do NOT auto-login: user must log in with email & password
     # --------------------------------------------------------
 
-    access_token = create_access_token(
-        str(user.id),
-        user.role.value,
-    )
-
-    raw_refresh, hashed_refresh = (
-        create_refresh_token()
-    )
-
-    await store_refresh_token(
-        str(user.id),
-        hashed_refresh,
-        db,
-    )
-
-    await db.commit()
-
-    set_refresh_cookie(
-        response,
-        raw_refresh,
-    )
-
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
+        "message": "Account created successfully. Please log in with your email and password.",
         "user": user_to_dict(user),
     }
 
@@ -774,11 +751,12 @@ async def forgot_password(
     whether an email exists.
     """
 
-    # Throttle: max 1 request per email per 60s (anti email-bomb)
+    # Throttle: max 1 request per email per cooldown (short in dev for testing)
+    cooldown = 3 if settings.APP_ENV == "development" else 60
     key = body.email.strip().lower()
     now = time.monotonic()
     last = _FORGOT_LAST_HIT.get(key, 0)
-    if now - last < _FORGOT_COOLDOWN_S:
+    if now - last < cooldown:
         return {
             "message": (
                 "If an account with that email exists, "
@@ -787,24 +765,19 @@ async def forgot_password(
         }
     _FORGOT_LAST_HIT[key] = now
 
-    # Case-insensitive: ALL accounts with this email get mail —
-    # password accounts get a reset link, Google-only accounts get
-    # a "use Google login" info mail. Unknown emails stay silent (200).
+    # Case-insensitive: ALL accounts with this email get mail
     users = await _users_by_email(db, body.email)
+
+    dev_reset_url = None
+    email_delivered = False
 
     for user in users:
         if user.hashed_password:
-
             # ------------------------------------------------
             # Generate secure reset token
             # ------------------------------------------------
-
             token = secrets.token_urlsafe(32)
-
-            expires_at = (
-                utcnow_naive()
-                + timedelta(minutes=15)
-            )
+            expires_at = utcnow_naive() + timedelta(minutes=15)
 
             password_reset = PasswordReset(
                 user_id=user.id,
@@ -812,46 +785,33 @@ async def forgot_password(
                 expires_at=expires_at,
                 is_used=False,
             )
-
             db.add(password_reset)
-
             await db.commit()
 
             # ------------------------------------------------
-            # Send REAL reset email via Resend (when configured)
+            # Send REAL reset email via configured provider
             # ------------------------------------------------
-
             sent = send_password_reset_email(
                 user.email,
                 user.full_name,
                 token,
             )
+            reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
             if sent:
+                email_delivered = True
                 log.info("Password reset email sent to %s", user.email)
             else:
+                dev_reset_url = reset_url
                 log.warning(
                     "Password reset email NOT sent to %s "
-                    "(Resend unconfigured — see server log link below)",
+                    "(email unconfigured or failed — see console link)",
                     user.email,
                 )
-
-            # ------------------------------------------------
-            # Local fallback: print link to server log
-            # ------------------------------------------------
-
-            if not is_email_configured():
-
-                reset_url = (
-                    f"{settings.FRONTEND_URL}"
-                    f"/reset-password?token={token}"
-                )
-
                 print("\n" + "=" * 70)
-                print("[LOCAL PASSWORD RESET — Resend not configured]")
-                print(f"Email: {user.email}")
-                print(f"Reset URL: {reset_url}")
+                print(f"[PASSWORD RESET LINK for {user.email}]:")
+                print(f"👉 {reset_url}")
                 print("Expires in: 15 minutes")
-                print("To send REAL mail: set RESEND_API_KEY + EMAIL_FROM in backend/.env")
                 print("=" * 70 + "\n")
 
         else:
@@ -859,15 +819,21 @@ async def forgot_password(
             mailed = send_google_only_info_email(user.email, user.full_name)
             log.info(
                 "Google-only reset info mail to %s: %s", user.email,
-                "sent" if mailed else "skipped (Resend unconfigured)",
+                "sent" if mailed else "skipped (unconfigured)",
             )
 
-    return {
+    resp = {
         "message": (
-            "If an account with that email exists, "
-            "a reset link has been sent"
-        )
+            "Password reset link sent to your registered email!"
+            if email_delivered
+            else "If an account with that email exists, a reset link has been sent."
+        ),
+        "email_delivered": email_delivered,
     }
+    if dev_reset_url:
+        resp["dev_reset_url"] = dev_reset_url
+
+    return resp
 
 
 # ============================================================

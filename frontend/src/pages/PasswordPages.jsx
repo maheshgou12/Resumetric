@@ -14,6 +14,9 @@ export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [realMail, setRealMail] = useState(null)
+  const [devResetUrl, setDevResetUrl] = useState(null)
+  const [emailDelivered, setEmailDelivered] = useState(false)
+
   useEffect(() => {
     api.get('/auth/email-status').then(r => setRealMail(r.data.resend_configured)).catch(() => setRealMail(null))
   }, [])
@@ -24,7 +27,11 @@ export function ForgotPasswordPage() {
   const onSubmit = async (data) => {
     setLoading(true)
     try {
-      await api.post('/auth/forgot-password', data)
+      const resp = await api.post('/auth/forgot-password', data)
+      setEmailDelivered(Boolean(resp.data?.email_delivered))
+      if (resp.data?.dev_reset_url) {
+        setDevResetUrl(resp.data.dev_reset_url)
+      }
       setSent(true)
     } catch {
       toast.error('Something went wrong. Please try again.')
@@ -39,7 +46,7 @@ export function ForgotPasswordPage() {
       justifyContent: 'center', padding: '2rem 1.5rem',
       background: 'radial-gradient(ellipse at top, rgba(99,102,241,0.08) 0%, transparent 60%), #0f172a',
     }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
+      <div style={{ width: '100%', maxWidth: 460 }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             width: 56, height: 56, borderRadius: '1rem',
@@ -56,15 +63,54 @@ export function ForgotPasswordPage() {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📬</div>
               <h3 style={{ marginBottom: '0.75rem' }}>Check your inbox</h3>
-              <p style={{ color: '#64748b', marginBottom: '1rem' }}>
-                If an account with that email exists, we've sent a reset link. It expires in 15 minutes.
-              </p>
-              {realMail === false && (
-                <p style={{ color: '#f59e0b', fontSize: '0.8125rem', marginBottom: '1.5rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '.5rem', padding: '.6rem .8rem' }}>
-                  ⚠️ Real email is not configured on this server yet — check the backend console for the reset link (dev mode).
+              {emailDelivered ? (
+                <p style={{ color: '#34d399', fontSize: '0.9375rem', marginBottom: '1.25rem', fontWeight: 500 }}>
+                  ✅ A password reset link has been sent to your registered email address! Please check your inbox (and spam folder). It expires in 15 minutes.
+                </p>
+              ) : (
+                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+                  If an account with that email exists, we've generated a reset link. It expires in 15 minutes.
                 </p>
               )}
-              <Link to="/login" className="btn-ghost" style={{ display: 'inline-flex' }}>← Back to login</Link>
+
+              {devResetUrl && (
+                <div style={{
+                  background: 'rgba(99,102,241,0.1)',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                  borderRadius: '.75rem',
+                  padding: '1.25rem',
+                  marginBottom: '1.5rem',
+                  textAlign: 'center'
+                }}>
+                  <p style={{ color: '#cbd5e1', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+                    <strong>⚡ Instant Reset Link (Dev Mode):</strong><br />
+                    Mail provider is unconfigured locally. Click below to reset your password directly:
+                  </p>
+                  <a
+                    href={devResetUrl}
+                    className="btn-primary"
+                    style={{
+                      display: 'inline-flex',
+                      padding: '0.625rem 1.25rem',
+                      fontSize: '0.875rem',
+                      textDecoration: 'none',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    🔑 Click Here to Reset Password
+                  </a>
+                </div>
+              )}
+
+              {realMail === false && !emailDelivered && !devResetUrl && (
+                <p style={{ color: '#f59e0b', fontSize: '0.8125rem', marginBottom: '1.5rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '.5rem', padding: '.6rem .8rem' }}>
+                  ⚠️ Real email is not configured in backend/.env yet — check the backend console for the reset link.
+                </p>
+              )}
+
+              <div>
+                <Link to="/login" className="btn-ghost" style={{ display: 'inline-flex' }}>← Back to login</Link>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

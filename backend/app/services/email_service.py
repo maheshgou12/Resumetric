@@ -57,7 +57,7 @@ def _send_brevo(to_email: str, subject: str, html: str) -> bool:
 
 
 def _send_smtp(to_email: str, subject: str, html: str) -> bool:
-    """Send via Gmail SMTP — works for ANY recipient, no domain needed."""
+    """Send via Gmail SMTP / custom SMTP — works for ANY recipient, no domain needed."""
     msg = EmailMessage()
     # Gmail requires From to be the account (or a verified alias), so use SMTP_USERNAME.
     msg["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.SMTP_USERNAME}>"
@@ -65,13 +65,21 @@ def _send_smtp(to_email: str, subject: str, html: str) -> bool:
     msg["Subject"] = subject
     msg.set_content("Please view this email in an HTML-capable client.")
     msg.add_alternative(html, subtype="html")
+    clean_pw = settings.SMTP_APP_PASSWORD.replace(" ", "").strip()
     try:
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as s:
-            s.login(settings.SMTP_USERNAME, settings.SMTP_APP_PASSWORD.replace(" ", ""))
-            s.send_message(msg)
+        if settings.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as s:
+                s.login(settings.SMTP_USERNAME.strip(), clean_pw)
+                s.send_message(msg)
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as s:
+                s.starttls()
+                s.login(settings.SMTP_USERNAME.strip(), clean_pw)
+                s.send_message(msg)
+        log.info("Email successfully sent via SMTP to %s", to_email)
         return True
     except Exception as e:
-        log.error("Gmail SMTP send failed to %s: %s", to_email, e)
+        log.error("SMTP send failed to %s: %s", to_email, e)
         return False
 
 

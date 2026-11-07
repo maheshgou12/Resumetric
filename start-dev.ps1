@@ -16,3 +16,4 @@ Write-Host "Servers launched in separate windows!" -ForegroundColor Yellow
 Write-Host "Frontend:    http://localhost:5173" -ForegroundColor White
 Write-Host "Backend API: http://127.0.0.1:8000/docs" -ForegroundColor White
 Write-Host "Health:      http://127.0.0.1:8000/health" -ForegroundColor White
+

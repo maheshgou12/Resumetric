@@ -37,9 +37,7 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (email, full_name, password) => {
     const resp = await api.post('/auth/register', { email, full_name, password })
-    localStorage.setItem('access_token', resp.data.access_token)
-    setUser(resp.data.user)
-    return resp.data.user
+    return resp.data
   }, [])
 
   const googleLogin = useCallback(async (idToken) => {

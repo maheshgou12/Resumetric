@@ -65,8 +65,8 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await registerUser(data.email, data.full_name, data.password)
-      toast.success('Account created! Please verify your email. 🎉')
-      navigate('/analyze')
+      toast.success('Account created successfully! Please log in with your email and password. 🎉')
+      navigate('/login', { state: { email: data.email, registered: true } })
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Registration failed')
     } finally {

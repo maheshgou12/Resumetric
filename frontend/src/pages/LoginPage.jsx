@@ -21,6 +21,10 @@ export default function LoginPage() {
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
+    defaultValues: {
+      email: location.state?.email || '',
+      password: '',
+    },
   })
 
   const onSubmit = async (data) => {
@@ -61,6 +65,20 @@ export default function LoginPage() {
         </div>
 
         <div className="card" style={{ padding: '2rem' }}>
+          {location.state?.registered && (
+            <div style={{
+              background: 'rgba(16,185,129,0.1)',
+              border: '1px solid rgba(16,185,129,0.25)',
+              borderRadius: '0.625rem',
+              padding: '0.75rem 1rem',
+              marginBottom: '1.25rem',
+              color: '#34d399',
+              fontSize: '0.875rem',
+              textAlign: 'center',
+            }}>
+              🎉 Account created successfully! Please enter your password to sign in.
+            </div>
+          )}
           <GoogleButton />
 
           {import.meta.env.VITE_GOOGLE_CLIENT_ID && (

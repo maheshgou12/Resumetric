@@ -18,3 +18,4 @@ echo Frontend: http://localhost:5173
 echo Backend API: http://127.0.0.1:8000/docs
 echo.
 pause
+
