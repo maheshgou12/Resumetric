@@ -137,6 +137,7 @@ export default function Navbar() {
                     {[
                       { href: '/analyze', icon: '⚡', label: 'New Analysis' },
                       { href: '/dashboard', icon: '📊', label: 'Dashboard' },
+                      { href: '/settings', icon: '⚙️', label: 'Settings' },
                     ].map(item => (
                       <Link key={item.href} to={item.href} onClick={() => setDropdownOpen(false)} style={{
                         display: 'flex', alignItems: 'center', gap: '0.5rem',

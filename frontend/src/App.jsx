@@ -22,6 +22,7 @@ const RoadmapPage = lazy(() => import('./pages/RoadmapPage'))
 const InterviewPage = lazy(() => import('./pages/InterviewPage'))
 const AnalysisResultsPage = lazy(() => import('./pages/AnalysisResultsPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 const LegalPages = lazy(() => import('./pages/LegalPages').then(m => ({ default: m.TermsPage })))
 const PrivacyPage = lazy(() => import('./pages/LegalPages').then(m => ({ default: m.PrivacyPage })))
@@ -126,6 +127,11 @@ export default function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <LazyPage><DashboardPage /></LazyPage>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <LazyPage><SettingsPage /></LazyPage>
               </ProtectedRoute>
             } />
 
