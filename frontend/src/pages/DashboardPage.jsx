@@ -85,23 +85,6 @@ export default function DashboardPage() {
         <Link to="/analyze" className="btn-primary">⚡ New Analysis</Link>
       </div>
 
-      {/* Email verification banner */}
-      {user && !user.is_verified && (
-        <div className="banner-warning" style={{ marginBottom: '1.5rem' }}>
-          ✉️ Please verify your email address to unlock all features.
-          {' '}<button
-            style={{ background: 'none', border: 'none', color: '#fcd34d', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-            onClick={async () => {
-              try {
-                await api.post('/auth/resend-verification')
-                toast.success('Verification link sent! Check the server console in local mode.')
-              } catch {
-                toast.error('Could not resend verification email')
-              }
-            }}
-          >Resend verification email</button>
-        </div>
-      )}
 
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>

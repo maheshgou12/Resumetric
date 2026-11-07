@@ -378,7 +378,7 @@ async def ai_chat(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """AI rewrite assistant chat"""
+    """AI rewrite assistant chat with Groq LLM and robust fallback"""
     result = await db.execute(
         select(Analysis).where(
             Analysis.id == analysis_id,
@@ -389,51 +389,115 @@ async def ai_chat(
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    if not settings.GROQ_API_KEY:
-        missing_str = ", ".join((analysis.missing_skills or [])[:4])
-        matched_str = ", ".join((analysis.matched_skills or [])[:4])
-        return {
-            "reply": (
-                f"### Resume Review Verdict\n"
-                f"Your resume matches **{analysis.match_score}%** of the job requirements with an ATS score of **{analysis.ats_score}%**.\n\n"
-                f"### High-Priority Action Items\n"
-                f"- **Incorporate Missing Skills**: Try adding relevant experience with {missing_str if missing_str else 'targeted job keywords'} if you possess these skills.\n"
-                f"- **Highlight Strong Matches**: Emphasize your background in {matched_str if matched_str else 'core competencies'} in your top experience bullets.\n"
-                f"- **Quantify Impact**: Begin bullet points with strong action verbs (e.g., *Built, Optimized, Architected*) and attach measurable numbers or percentage gains.\n\n"
-                f"### Next Step\n"
-                f"Update your resume's experience section with metrics and re-upload to track your score improvement!"
-            )
-        }
+    role_str = analysis.job_title or "Target Position"
+    comp_str = analysis.company_name or "Target Company"
+    match_val = f"{analysis.match_score:.1f}" if analysis.match_score is not None else "N/A"
+    ats_val = f"{analysis.ats_score:.1f}" if analysis.ats_score is not None else "N/A"
+    matched_skills = analysis.matched_skills or []
+    missing_skills = analysis.missing_skills or []
+    user_name = current_user.full_name or "Candidate"
+    missing_str = ", ".join(missing_skills[:5]) if missing_skills else "targeted industry keywords"
+    matched_str = ", ".join(matched_skills[:5]) if matched_skills else "core technical background"
 
-    client = Groq(api_key=settings.GROQ_API_KEY)
-    system_prompt = f"""You are an expert resume writer and career coach helping improve a resume.
-The resume is targeting: {analysis.job_title or 'the provided job description'}.
-Match score: {analysis.match_score}% | ATS score: {analysis.ats_score}%
+    # Attempt live Groq LLM if configured
+    if settings.GROQ_API_KEY:
+        try:
+            from groq import Groq
+            client = Groq(api_key=settings.GROQ_API_KEY, timeout=5.0, max_retries=0)
+            system_prompt = f"""You are CareerLens AI, an expert resume strategist and career coach.
+Candidate Name: {user_name}
+Target Role: {role_str} at {comp_str}
+Match Score: {match_val}% | ATS Score: {ats_val}%
+Matched Skills: {', '.join(matched_skills[:8]) or 'None identified'}
+Missing/Target Skills: {', '.join(missing_skills[:8]) or 'None identified'}
 
-Resume excerpt (first 1000 chars): {(analysis.resume_text or '')[:1000]}
+Resume Snippet:
+{(analysis.resume_text or '')[:1200]}
 
-Job Description excerpt (first 500 chars): {analysis.job_description[:500]}
+Job Description Snippet:
+{(analysis.job_description or '')[:800]}
 
 Help the user improve their resume with specific, actionable suggestions.
+FORMAT RULES:
+- Use short sections with ### headings.
+- Use bullet (-) lists with bold key terms at the start of each bullet.
+- Be concise, direct, and constructive.
+- If recommending bullet points, provide high-impact 'Before' vs 'After' examples with metrics.
+- End with a clear next step."""
 
-FORMAT RULES (must follow):
-- Use short sections with ### headings (max 4 words each).
-- Use bullet (-) or numbered (1.) lists for every point — never walls of text.
-- Keep each bullet to 1-2 lines. Bold the key term at the start of each bullet.
-- Use a markdown table ONLY when comparing before/after or listing sections.
-- NEVER use --- dividers, *** marks, or more than one blank line in a row.
-- Start with a one-line verdict, then the points. End with the single most important next step."""
+            response = client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": body.message},
+                ],
+                temperature=0.7,
+                max_tokens=800,
+            )
+            if response.choices and response.choices[0].message.content:
+                return {"reply": response.choices[0].message.content.strip()}
+        except Exception as exc:
+            log.warning("Groq AI chat call failed: %s; using intelligent fallback coach", exc)
 
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": body.message},
-        ],
-        temperature=0.7,
-        max_tokens=800,
-    )
-    return {"reply": response.choices[0].message.content}
+    # Contextual, intelligent coach response based on the user's inquiry
+    q = body.message.lower().strip()
+    if any(w in q for w in ["hi", "hello", "hey", "help", "who", "gpt", "start"]):
+        reply = (
+            f"### Resume Coach Ready\n"
+            f"Hello {user_name.split()[0]}! I've analyzed your resume against the **{role_str}** requirements. "
+            f"Your current match score is **{match_val}%** with an ATS score of **{ats_val}%**.\n\n"
+            f"### Key Focus Areas\n"
+            f"- **Your Strengths**: Strong alignment in **{matched_str}**.\n"
+            f"- **High-Priority Keywords**: Recruiters and ATS are scanning for **{missing_str}**.\n"
+            f"- **Action Verb Power**: Start each bullet point with decisive action verbs and measurable business results.\n\n"
+            f"### What Would You Like To Improve?\n"
+            f"- Ask me: *\"How do I add {missing_skills[0] if missing_skills else 'missing skills'} to my bullets?\"*\n"
+            f"- Paste any bullet point from your resume and I will rewrite it with quantified impact!\n"
+            f"- Ask: *\"How do I increase my ATS score?\"*"
+        )
+    elif any(w in q for w in ["skill", "missing", "keyword", "gap", "tech"]):
+        missing_items = "\n".join([f"- **{s}**: Feature in your technical skills and reference in relevant project bullet points." for s in missing_skills[:6]])
+        reply = (
+            f"### Skills Gap Analysis for {role_str}\n"
+            f"To bridge the gap from **{match_val}%** towards **85%+**, incorporate these target keywords:\n\n"
+            f"### Missing Keywords\n"
+            f"{missing_items if missing_items else '- No critical skills missing! Focus on adding quantified impact to your experience.'}\n\n"
+            f"### Pro Tip\n"
+            f"Do not just list keywords in a clump. Integrate them naturally into project bullets describing what you built, the scale, and the result."
+        )
+    elif any(w in q for w in ["bullet", "rewrite", "experience", "metric", "verb", "project", "work"]):
+        reply = (
+            f"### High-Impact Bullet Formula\n"
+            f"Use the Google **X-Y-Z formula**: *Accomplished [X] as measured by [Y] by doing [Z]*.\n\n"
+            f"### Before & After Example\n"
+            f"- **Before**: *Worked on backend services and wrote SQL queries for user data.*\n"
+            f"- **After**: *Architected 6+ RESTful microservices using Python and PostgreSQL, reducing query latency by 35% across 20k+ daily transactions.*\n\n"
+            f"### Recommended Verbs for {role_str}\n"
+            f"- *Engineered, Automated, Streamlined, Spearheaded, Optimized, Delivered*\n\n"
+            f"Paste any bullet point you would like me to rewrite for you!"
+        )
+    elif any(w in q for w in ["ats", "format", "score", "pass", "screen"]):
+        reply = (
+            f"### ATS Compatibility Assessment\n"
+            f"Your resume scored **{ats_val}%** on automated ATS parsing checks.\n\n"
+            f"### ATS Optimization Rules\n"
+            f"- **Simple Clean Structure**: Stick to standard headers (*Summary*, *Skills*, *Experience*, *Education*, *Projects*).\n"
+            f"- **Single Column Flow**: Avoid multi-column grids or sidebars which can confuse legacy applicant tracking systems.\n"
+            f"- **Standard Fonts**: Use clean sans-serif fonts (Inter, Arial, Calibri) and clean bullet points.\n"
+            f"- **Include Keywords**: Ensure keywords like **{missing_str}** appear verbatim where truthful."
+        )
+    else:
+        reply = (
+            f"### Strategic Review for {role_str}\n"
+            f"Your resume currently achieves a **{match_val}% match** and an **{ats_val}% ATS rating**.\n\n"
+            f"### Recommended Next Steps\n"
+            f"- **Incorporate Target Skills**: Add relevant experience with **{missing_str}**.\n"
+            f"- **Leverage Proven Strengths**: Highlight your experience in **{matched_str}** prominently in your latest role.\n"
+            f"- **Quantify Outcomes**: Ensure at least 60% of your bullet points include measurable numbers, percentages, or time saved.\n\n"
+            f"Paste any section of your resume here and I will rewrite it to maximize your interview callback rate!"
+        )
+
+    return {"reply": reply}
 
 
 @router.post("/{analysis_id}/cover-letter")
@@ -442,7 +506,7 @@ async def generate_cover_letter(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Generate a tailored cover letter"""
+    """Generate a tailored cover letter with Groq LLM and robust fallback"""
     result = await db.execute(
         select(Analysis).where(
             Analysis.id == analysis_id,
@@ -453,41 +517,62 @@ async def generate_cover_letter(
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    if not settings.GROQ_API_KEY:
-        skills = ", ".join((analysis.matched_skills or [])[:4]) or "software development and core technical competencies"
-        role = analysis.job_title or "open position"
-        company = analysis.company_name or "your team"
-        cl = (
-            f"Dear Hiring Manager,\n\n"
-            f"I am writing to express my enthusiastic interest in the {role} opportunity at {company}. "
-            f"With proven hands-on experience in {skills}, I am excited about the opportunity to bring my technical expertise and problem-solving abilities to your organization.\n\n"
-            f"Throughout my career and projects, I have consistently focused on delivering reliable, scalable solutions while collaborating effectively across engineering teams. "
-            f"My background directly aligns with the key qualifications outlined in your job posting, and I am eager to contribute immediately to your ongoing initiatives.\n\n"
-            f"I would appreciate the chance to discuss how my experience and passion can support {company}'s objectives. Thank you for your time and consideration.\n\n"
-            f"Sincerely,\n{current_user.full_name}"
-        )
-        return {"cover_letter": cl}
+    user_name = current_user.full_name or "Applicant"
+    role = analysis.job_title or "Software Developer / Engineer"
+    company = analysis.company_name or "your engineering team"
+    matched_skills = analysis.matched_skills or []
+    missing_skills = analysis.missing_skills or []
+    skills_text = ", ".join(matched_skills[:6]) if matched_skills else "software engineering, system architecture, and modern application development"
 
-    from groq import Groq
-    client = Groq(api_key=settings.GROQ_API_KEY)
+    # Attempt live Groq generation if configured
+    if settings.GROQ_API_KEY:
+        try:
+            from groq import Groq
+            client = Groq(api_key=settings.GROQ_API_KEY, timeout=6.0, max_retries=0)
+            prompt = f"""Write a compelling, professional cover letter for this candidate.
 
-    prompt = f"""Write a professional, personalized cover letter for this candidate.
+Candidate Name: {user_name}
+Target Role: {role}
+Company: {company}
+Matched Skills: {', '.join(matched_skills[:8])}
 
-Candidate Name: {current_user.full_name}
-Target Role: {analysis.job_title or 'the position'}
-Company: {analysis.company_name or 'the company'}
-Matched Skills: {', '.join((analysis.matched_skills or [])[:8])}
+Resume Excerpt:
+{(analysis.resume_text or '')[:900]}
 
-Resume Summary (first 800 chars): {(analysis.resume_text or '')[:800]}
-Job Description (first 800 chars): {analysis.job_description[:800]}
+Job Description Excerpt:
+{(analysis.job_description or '')[:900]}
 
-Write a compelling 3-4 paragraph cover letter. Make it specific, not generic.
-Start with Dear Hiring Manager, and end with Sincerely, {current_user.full_name}."""
+Requirements:
+- 3 to 4 well-structured paragraphs.
+- Specific to the candidate's skills and the target role.
+- Confident, professional, and engaging tone.
+- Start with "Dear Hiring Manager," and sign off with "Sincerely,\n{user_name}"."""
 
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.8,
-        max_tokens=1000,
+            response = client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=1000,
+            )
+            if response.choices and response.choices[0].message.content:
+                return {"cover_letter": response.choices[0].message.content.strip()}
+        except Exception as exc:
+            log.warning("Groq cover letter generation failed: %s; using intelligent fallback generator", exc)
+
+    growth_sentence = (
+        f"In addition, I have been actively expanding my practical expertise in {', '.join(missing_skills[:2])} to deliver even greater versatility to the team."
+        if missing_skills
+        else "I continuously keep pace with emerging engineering practices and high-performance system design."
     )
-    return {"cover_letter": response.choices[0].message.content}
+
+    cl = (
+        f"Dear Hiring Manager,\n\n"
+        f"I am writing to express my enthusiastic interest in the {role} position at {company}. "
+        f"With hands-on experience in {skills_text}, I am excited about the opportunity to bring my problem-solving mindset, technical dedication, and collaborative approach to your organization.\n\n"
+        f"Throughout my background and technical projects, I have consistently focused on engineering scalable, reliable solutions and translating requirements into robust implementations. "
+        f"My background directly aligns with the key qualifications outlined in your job posting, and I am eager to apply my skills to support your product development roadmap.\n\n"
+        f"{growth_sentence} I thrive in fast-paced environments where clean code, effective cross-functional collaboration, and measurable business impact are valued.\n\n"
+        f"I would welcome the opportunity to discuss how my experience and passion can contribute to the success of {company}. Thank you for your time and consideration.\n\n"
+        f"Sincerely,\n{user_name}"
+    )
+    return {"cover_letter": cl}

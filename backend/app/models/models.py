@@ -65,7 +65,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=True)  # null for OAuth users
     role = Column(SAEnum(UserRole), default=UserRole.user, nullable=False)
     is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
+    is_verified = Column(Boolean, default=True)
     google_id = Column(String(255), unique=True, nullable=True)
     avatar_url = Column(String(500), nullable=True)
     analyses_this_month = Column(Integer, default=0)

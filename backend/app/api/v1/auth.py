@@ -236,7 +236,7 @@ async def register(
         email=body.email.strip(),
         full_name=body.full_name,
         hashed_password=get_password_hash(body.password),
-        is_verified=False,
+        is_verified=True,
     )
 
     db.add(user)
