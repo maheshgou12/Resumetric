@@ -30,7 +30,7 @@ def _make_engine():
             url,
             echo=settings.DEBUG,
             poolclass=NullPool,
-            connect_args={"check_same_thread": False},
+            connect_args={"check_same_thread": False, "timeout": 30},
         )
     return create_async_engine(
         url,

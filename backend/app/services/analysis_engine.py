@@ -256,25 +256,30 @@ Respond ONLY with valid JSON in this exact format:
   "priority_action": "The single most impactful change to make right now"
 }}"""
 
-    try:
-        response = client.chat.completions.create(
-            model=settings.GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=1500,
-        )
-        content = response.choices[0].message.content
-        # Extract JSON from response
-        import json
-        # Find JSON block
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        if start >= 0 and end > start:
-            return json.loads(content[start:end])
-        return _fallback_feedback(match_score, ats_score, missing_skills)
-    except Exception as e:
-        print(f"LLM error: {e}")
-        return _fallback_feedback(match_score, ats_score, missing_skills)
+    import json
+    models_to_try = [settings.GROQ_MODEL, "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    # De-duplicate while preserving order
+    seen = set()
+    models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
+
+    for model_name in models:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=1500,
+            )
+            content = response.choices[0].message.content
+            start = content.find("{")
+            end = content.rfind("}") + 1
+            if start >= 0 and end > start:
+                return json.loads(content[start:end])
+        except Exception as e:
+            print(f"Groq error with {model_name}: {e}")
+            continue
+
+    return _fallback_feedback(match_score, ats_score, missing_skills)
 
 
 def _fallback_feedback(

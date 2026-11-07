@@ -62,3 +62,4 @@ def test_suggest_career_domains():
     domains = suggest_career_domains(skills)
     assert len(domains) > 0
     assert any("Backend" in d["domain"] for d in domains)
+

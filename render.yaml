@@ -21,7 +21,7 @@ services:
           name: resume-analyzer-db
           property: connectionString
       - key: GROQ_MODEL
-        value: openai/gpt-oss-120b
+        value: llama-3.3-70b-versatile
       - key: EMAIL_FROM_NAME
         value: CareerLens AI
       - key: S3_BUCKET_NAME

@@ -30,3 +30,4 @@ def test_refresh_token_creation():
     raw_token, hashed_token = create_refresh_token()
     assert len(raw_token) > 20
     assert hash_token(raw_token) == hashed_token
+
