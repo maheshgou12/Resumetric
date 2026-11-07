@@ -9,6 +9,7 @@ build/
 *.env
 *.local
 *.db
+*.db-*
 *.sqlite
 *.sqlite3
 venv/
