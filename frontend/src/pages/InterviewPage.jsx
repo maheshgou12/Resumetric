@@ -2,7 +2,19 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
 
-const DOMAINS = ['Frontend Development', 'Backend Development', 'Full-Stack Development', 'Data Science / ML', 'Data Analytics', 'DevOps / Cloud', 'Mobile Development', 'QA / Test Engineering', 'UI/UX Design', 'Project / Product Management']
+const DOMAINS = [
+  'Frontend Development',
+  'Backend Development',
+  'Full-Stack Development',
+  'Data Science / ML',
+  'Data Analytics',
+  'DevOps / Cloud',
+  'Mobile Development',
+  'Cybersecurity',
+  'QA / Test Engineering',
+  'UI/UX Design',
+  'Project / Product Management',
+]
 
 export default function InterviewPage() {
   const [domain, setDomain] = useState('Backend Development')

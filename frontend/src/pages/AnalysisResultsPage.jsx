@@ -242,7 +242,9 @@ export default function AnalysisResultsPage() {
       const a = document.createElement('a')
       a.href = url
       a.download = `careerlens-report-${id.slice(0, 8)}.pdf`
+      document.body.appendChild(a)
       a.click()
+      a.remove()
       URL.revokeObjectURL(url)
       toast.success('Report downloaded!')
     } catch {

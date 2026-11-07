@@ -72,6 +72,23 @@ export default function DashboardPage() {
     queryFn: () => api.get('/users/me/stats').then(r => r.data),
   })
 
+  const downloadReport = async (analysisId) => {
+    try {
+      const resp = await api.get(`/analysis/${analysisId}/report`, { responseType: 'blob' })
+      const url = URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }))
+      const el = document.createElement('a')
+      el.href = url
+      el.download = `careerlens-report-${analysisId.slice(0, 8)}.pdf`
+      document.body.appendChild(el)
+      el.click()
+      el.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Report downloaded!')
+    } catch {
+      toast.error('Could not download report')
+    }
+  }
+
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2.5rem 1.5rem', flex: 1 }}>
       {/* Header */}
@@ -246,19 +263,17 @@ export default function DashboardPage() {
                         >
                           View
                         </Link>
-                        {a.report_url && (
-                          <a
-                            href={a.report_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        {a.status === 'completed' && (
+                          <button
+                            onClick={() => downloadReport(a.id)}
                             style={{
                               padding: '0.25rem 0.625rem', borderRadius: '0.375rem',
                               background: 'rgba(16,185,129,0.1)', color: '#34d399',
-                              textDecoration: 'none', fontSize: '0.75rem', fontWeight: 600,
+                              border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
                             }}
                           >
                             ⬇ PDF
-                          </a>
+                          </button>
                         )}
                       </div>
                     </td>

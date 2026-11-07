@@ -279,14 +279,74 @@ def roadmap_for_skill(skill: str) -> dict:
 
 def interview_questions(domain: str, skills: list[str]) -> list[dict]:
     bank = {
-        "Frontend Development": ["Explain the virtual DOM.", "Controlled vs uncontrolled components?", "How do you optimize React rendering?"],
-        "Backend Development": ["Explain REST status codes.", "How do you handle auth (JWT)?", "SQL vs NoSQL trade-offs?"],
-        "Data Science / ML": ["Bias vs variance?", "How do you handle imbalanced data?", "Explain overfitting fixes."],
-        "DevOps / Cloud": ["What is CI/CD?", "Docker vs VM?", "How do you secure secrets?"],
+        "Frontend Development": [
+            "Explain the virtual DOM and reconciliation algorithm in modern frameworks.",
+            "What is the difference between controlled and uncontrolled components?",
+            "How do you optimize web vitals (LCP, FID, CLS) and component re-rendering?",
+        ],
+        "Backend Development": [
+            "Explain idempotent HTTP methods and REST status code conventions.",
+            "How do you architect secure JWT authentication with refresh token rotation?",
+            "What are the trade-offs between SQL relational schemas and NoSQL document stores?",
+        ],
+        "Full-Stack Development": [
+            "How do you design end-to-end data contracts and type safety between frontend and backend?",
+            "Explain your strategy for client-side state caching vs server-side database indexing.",
+            "How do you handle distributed tracing and error monitoring in full-stack applications?",
+        ],
+        "Data Science / ML": [
+            "Explain the bias-variance tradeoff and how regularization techniques (L1/L2) mitigate it.",
+            "How do you handle class imbalance in classification datasets (SMOTE, focal loss, downsampling)?",
+            "What techniques do you use to detect and prevent data leakage during feature engineering?",
+        ],
+        "Data Analytics": [
+            "What is the architectural difference between a Star schema and a Snowflake schema?",
+            "How do you write efficient SQL window functions (ROW_NUMBER, RANK, DENSE_RANK) for time-series analysis?",
+            "How do you identify anomalies and outliers in business KPI telemetry?",
+        ],
+        "DevOps / Cloud": [
+            "Explain the core components of a CI/CD pipeline and automated blue-green deployments.",
+            "Compare containerization (Docker) with virtual machines in terms of kernel isolation and overhead.",
+            "How do you manage secrets, IAM policies, and infrastructure-as-code securely?",
+        ],
+        "Mobile Development": [
+            "How do you handle offline caching, local data persistence, and synchronization conflicts?",
+            "What strategies do you employ to minimize mobile battery consumption and background network calls?",
+            "Explain app state management and mobile lifecycle transitions.",
+        ],
+        "Cybersecurity": [
+            "How do you audit and defend against OWASP Top 10 vulnerabilities (SQLi, XSS, CSRF, SSRF)?",
+            "Explain the principle of least privilege and zero-trust network architecture.",
+            "How do you implement secure rate-limiting, CORS, and credential hashing algorithms?",
+        ],
+        "QA / Test Engineering": [
+            "How do you structure the testing pyramid (Unit, Integration, End-to-End) for continuous deployment?",
+            "What techniques do you use to diagnose, isolate, and eliminate flaky tests?",
+            "Explain the methodology behind performance benchmarking, load testing, and stress testing.",
+        ],
+        "QA / Testing": [
+            "How do you structure the testing pyramid (Unit, Integration, End-to-End) for continuous deployment?",
+            "What techniques do you use to diagnose, isolate, and eliminate flaky tests?",
+            "Explain the methodology behind performance benchmarking, load testing, and stress testing.",
+        ],
+        "UI/UX Design": [
+            "How do you ensure web accessibility compliance according to WCAG 2.1 AA standards?",
+            "Explain your workflow for translating Figma design tokens into production CSS and React components.",
+            "How do you conduct usability tests and synthesize user feedback into actionable redesigns?",
+        ],
+        "Project / Product Management": [
+            "How do you prioritize competing engineering roadmap initiatives using frameworks like RICE or MoSCoW?",
+            "How do you measure product health using North Star metrics and leading indicators?",
+            "How do you balance technical debt reduction with shipping new user-facing features?",
+        ],
     }
-    qs = bank.get(domain, ["Tell me about yourself.", "Describe a challenging project.", "How do you learn new tech?"])
-    skill_q = [f"What is your experience with {s}?" for s in (skills or [])[:2]]
-    return [{"question": q, "tip": "Answer with STAR + metric"} for q in (qs + skill_q)][:6]
+    qs = bank.get(domain, [
+        "Tell me about a technically challenging project you delivered and what made it difficult.",
+        "How do you approach learning and evaluating a newly released technology or framework?",
+        "Describe a time you diagnosed and resolved a high-severity production issue.",
+    ])
+    skill_q = [f"How have you applied {s} in production architectures or complex projects?" for s in (skills or [])[:3]]
+    return [{"question": q, "tip": "Answer using the STAR method (Situation, Task, Action, Result) with measurable metrics"} for q in (qs + skill_q)][:7]
 
 
 # ─── 6. Resume version diff ─────────────────────────────────────────────────

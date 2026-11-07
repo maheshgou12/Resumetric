@@ -249,6 +249,7 @@ ALLOWED_DOMAINS = {
     "Backend Development", "Frontend Development", "Full-Stack Development",
     "Data Science / ML", "Data Analytics", "DevOps / Cloud",
     "Mobile Development", "Cybersecurity", "UI/UX Design", "QA / Testing",
+    "QA / Test Engineering", "Project / Product Management",
 }
 
 
