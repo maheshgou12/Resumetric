@@ -17,6 +17,28 @@ async def lifespan(app: FastAPI):
     # Startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Auto-seed default admin on fresh database so production is immediately ready
+    try:
+        from sqlalchemy import select
+        from app.core.database import AsyncSessionLocal
+        from app.models.models import User, UserRole
+        from app.core.security import get_password_hash
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(User).limit(1))
+            if not result.scalar_one_or_none():
+                admin = User(
+                    email="admin@careerlens.ai",
+                    full_name="Admin User",
+                    hashed_password=get_password_hash("Admin@12345"),
+                    role=UserRole.admin,
+                    is_verified=True,
+                )
+                session.add(admin)
+                await session.commit()
+    except Exception:
+        pass
+
     yield
     # Shutdown
     await engine.dispose()
@@ -39,6 +61,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
