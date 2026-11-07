@@ -2,7 +2,7 @@
 
 > AI-powered resume & career intelligence: JD-aware match + ATS scores, skills gaps, rewrite coaching, cover letters, roadmaps, interview prep, PDF reports — unlimited analyses for every account.
 
-**Live app:** https://resumetric-challengers13.vercel.app
+**Live app:** https://resumetric-challengers13.vercel.app  
 **API:** https://resumetric-rus3.onrender.com · **Docs:** https://resumetric-rus3.onrender.com/docs · **Health:** https://resumetric-rus3.onrender.com/health
 
 ---
@@ -13,91 +13,112 @@
 - **AI Match Score** — TF-IDF cosine similarity between resume and job description
 - **JD-aware ATS Score** — format (40) + JD skill coverage (35) + JD keyword overlap (25), with point-wise reasons
 - **Skills Gap** — 75+ detected skills, matched vs missing, learning roadmap with free resources
-- **LLM Feedback** — Groq (`openai/gpt-oss-120b`): verdict, strengths, weaknesses, priority action
+- **LLM Feedback** — Groq (`llama-3.3-70b-versatile` with automatic model fallback & offline heuristics)
 - **AI Rewrite Coach** — chat with resume + JD context, structured markdown replies
 - **Cover Letter Generator** — one-click tailored letter
 - **PDF Report** — ReportLab report with scores, skills, roadmap
 - **100-pt Resume Score + Career Domains** — offline heuristic, 10 domains ranked by fit
 - **Interview Prep** — domain questions + STAR tips · **Progress trends** · **Resume library** (versions, compare, re-analyze)
 
-### Accounts & mail (per-user, any inbox)
+### Accounts & Mail
 - Email + password (bcrypt, strength rules, case-insensitive) and Google OAuth (server-verified)
-- JWT access (30 min) + rotating httpOnly refresh cookies (7 days)
-- Email verification, forgot/reset password (15-min single-use tokens, anti-enumeration, 60s throttle)
-- Mail via Brevo HTTPS API (any inbox) → Gmail SMTP → Resend fallback
+- Secure signup with explicit login (email pre-filled upon account creation)
+- JWT access (30 min) + rotating cross-origin httpOnly refresh cookies (`SameSite=None` in production)
+- Email verification & forgot/reset password via **Gmail SMTP** (SSL/STARTTLS) → Brevo HTTPS → Resend fallback
+- Instant development reset button on screen during local testing
 - User dashboard (history, stats, trends) + admin dashboard (platform stats, missing skills, user search)
 
 ---
 
-## 🛠️ Run locally
+## 🛠️ Run Locally
+
+### 1-Click Launch (Windows)
+Double-click `start-dev.bat` or run:
+```powershell
+.\start-dev.ps1
+```
+This automatically starts:
+- **Backend API**: http://127.0.0.1:8000 (Swagger docs at `/docs`)
+- **Frontend App**: http://localhost:5173
+
+---
+
+### Manual Launch (Two Terminals)
 
 Prerequisites: Python 3.11+, Node.js 20+.
 
 ```bash
-# Backend
+# Terminal 1 - Backend
 cd backend
 pip install -r requirements.txt
-cp .env.example .env   # fill GROQ_API_KEY + mail keys (see below)
-python -m uvicorn main:app --reload   # http://127.0.0.1:8000, docs at /docs
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
-# Frontend (second terminal)
+# Terminal 2 - Frontend
 cd frontend
 npm install
-npm run dev                       # http://localhost:5173
+npm run dev
 ```
-
-Local defaults need zero setup: SQLite database auto-creates, analysis runs inline (no Redis needed).
-
-### Minimal `.env` for full local features
-
-| Key | Get it at | Enables |
-|---|---|---|
-| `GROQ_API_KEY` | console.groq.com | AI feedback, chat, cover letters |
-| `BREVO_API_KEY` + `BREVO_SENDER_EMAIL` | brevo.com (verify sender, no domain needed) | Real mail to any inbox |
-| `GOOGLE_CLIENT_ID` (+ secret) | Google Cloud Console | Continue-with-Google (`http://localhost:5173` in JS origins) |
-| `SMTP_USERNAME` + `SMTP_APP_PASSWORD` | myaccount.google.com/apppasswords | Local mail fallback |
-
-Without mail keys, reset/verify links print to the backend console (dev mode).
 
 ---
 
-## 🏗️ Tech stack
+## 🔑 Pre-Seeded Demo Accounts
+
+To explore the dashboard and analytics immediately without manual entry, run:
+```bash
+cd backend
+python seed_demo.py
+```
+
+| Account | Email | Password | Access Level |
+|---|---|---|---|
+| **Admin** | `admin@careerlens.ai` | `Admin@12345` | Full features + Admin Analytics Dashboard (`/admin`) |
+| **Demo User** | `demo@careerlens.ai` | `Demo@12345` | Pre-loaded resumes, ATS 85%, Match 88.5%, and charts |
+
+---
+
+## ✉️ Email Testing (Gmail SMTP)
+
+To test your Gmail SMTP connection and verify emails land in your inbox:
+```bash
+cd backend
+python test_email.py
+```
+
+---
+
+## 🏗️ Tech Stack
 
 | Layer | Tech |
 |---|---|
 | Frontend | React 19 + Vite, Tailwind v4, Router v7, React Query, Recharts, Axios, react-markdown |
-| Backend | FastAPI, SQLAlchemy 2 async, Pydantic v2, bcrypt/JWT, Groq, scikit-learn, ReportLab |
-| Data | SQLite (local) / PostgreSQL (prod, asyncpg) |
-| Mail | Brevo HTTPS → Gmail SMTP → Resend |
-| Deploy | Vercel (frontend) + Render + Render Postgres (backend) |
+| Backend | FastAPI, SQLAlchemy 2 async (SQLite WAL / PostgreSQL asyncpg), Pydantic v2, bcrypt/JWT, Groq, scikit-learn, ReportLab |
+| Email | Gmail SMTP (465/587) → Brevo HTTPS → Resend fallback |
+| Deploy | Vercel (Edge CDN Frontend) + Render (Backend + Managed PostgreSQL) |
 
-## 📁 Structure
+---
 
-```
-├── render.yaml            # Render blueprint (backend + database)
-├── vercel.json            # SPA rewrites + security headers
-├── docker-compose.yml     # Local Postgres + Redis (optional)
-├── backend/
-│   ├── main.py            # App entry, CORS, /health
-│   ├── app/api/v1/        # auth, analysis, career, users, admin
-│   ├── app/core/          # config (env-driven), database, security, guards
-│   ├── app/models/        # User, Analysis, Resume, tokens
-│   └── app/services/      # scoring engine, parser, PDF, mail, storage
-└── frontend/src/
-    ├── pages/             # 16 pages (landing → dashboards → legal)
-    ├── components/        # Navbar, GoogleButton, ProtectedRoute
-    ├── context/           # Auth state + token refresh
-    └── lib/api.js         # Axios client
+## 🚀 Deploy to Production (Anytime, Globally)
+
+### 1. Push to GitHub
+```bash
+git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPO>.git
+git push -u origin main
 ```
 
-## 🚀 Deploy (how this repo is live)
+### 2. Backend → Render
+1. Go to [dashboard.render.com](https://dashboard.render.com) -> **New +** -> **Blueprint**.
+2. Select your repository (Render automatically reads `render.yaml`).
+3. Set your environment variables in the Render dashboard:
+   - `JWT_SECRET_KEY`: Random 32+ character key
+   - `SECRET_KEY`: Random 32+ character key
+   - `FRONTEND_URL`: Your Vercel frontend URL
+   - `ALLOWED_ORIGINS`: Your Vercel frontend URL
+   - `SMTP_USERNAME` & `SMTP_APP_PASSWORD`: Your Gmail & App Password
+4. Deploy! Render provisions the FastAPI Web Service + PostgreSQL database with free SSL.
 
-- **Frontend → Vercel:** import repo, root `frontend/` (repo-root `vercel.json` also works with build `cd frontend && npm run build`, output `frontend/dist`). Env: `VITE_API_URL=https://<api>/api/v1`, `VITE_GOOGLE_CLIENT_ID`.
-- **Backend → Render:** Blueprint/new web service, `rootDir backend`, build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`. Attach Postgres; env: `JWT_SECRET_KEY`, `SECRET_KEY`, `GROQ_API_KEY`, mail keys, `GOOGLE_*`, `FRONTEND_URL` + `ALLOWED_ORIGINS` (= Vercel URL).
-- **Google OAuth for all users:** add the Vercel URL to Authorized JavaScript origins, fill Branding URLs (`/privacy`, `/terms` exist), Publish the app.
-
-## 🔒 Security notes
-
-- Refresh tokens stored as SHA-256 hashes; httpOnly cookies; single-use short-lived reset tokens
-- Case-insensitive email identity; Google-only accounts get guidance mail instead of silent failure
-- Uploads validated (type + 5MB); naive-UTC datetimes for Postgres compatibility; secrets never committed (see `.gitignore`)
+### 3. Frontend → Vercel
+1. In [Vercel](https://vercel.com), click **Add New** -> **Project** -> Import your repo.
+2. Root Directory: `frontend`
+3. Environment Variables:
+   - `VITE_API_URL`: `https://<your-render-backend-url>/api/v1`
+4. Deploy! Your app is instantly distributed across Vercel's global edge network.
