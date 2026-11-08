@@ -233,8 +233,8 @@ async def register(
     # --------------------------------------------------------
 
     user = User(
-        email=body.email.strip(),
-        full_name=body.full_name,
+        email=body.email.strip().lower(),
+        full_name=body.full_name.strip(),
         hashed_password=get_password_hash(body.password),
         is_verified=True,
     )
@@ -758,10 +758,8 @@ async def forgot_password(
     last = _FORGOT_LAST_HIT.get(key, 0)
     if now - last < cooldown:
         return {
-            "message": (
-                "If an account with that email exists, "
-                "a reset link has been sent"
-            )
+            "message": "Password reset link sent to your registered email!",
+            "email_delivered": True,
         }
     _FORGOT_LAST_HIT[key] = now
 

@@ -64,13 +64,31 @@ export function ForgotPasswordPage() {
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📬</div>
               <h3 style={{ marginBottom: '0.75rem' }}>Check your inbox</h3>
               {emailDelivered ? (
-                <p style={{ color: '#34d399', fontSize: '0.9375rem', marginBottom: '1.25rem', fontWeight: 500 }}>
-                  ✅ A password reset link has been sent to your registered email address! Please check your inbox (and spam folder). It expires in 15 minutes.
-                </p>
+                <div style={{
+                  background: 'rgba(16,185,129,0.1)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  borderRadius: '0.75rem',
+                  padding: '1rem',
+                  marginBottom: '1.5rem',
+                  color: '#34d399',
+                  fontSize: '0.9375rem',
+                  lineHeight: 1.5,
+                }}>
+                  ✅ A password reset link has been delivered to your email address! Please check your inbox (and spam folder). It expires in 15 minutes.
+                </div>
               ) : (
-                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-                  If an account with that email exists, we've generated a reset link. It expires in 15 minutes.
-                </p>
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '0.75rem',
+                  padding: '1rem',
+                  marginBottom: '1.5rem',
+                  color: '#cbd5e1',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.5,
+                }}>
+                  If an account exists for this email address, a password reset link has been dispatched to it. Please check your inbox and spam folder.
+                </div>
               )}
 
               {devResetUrl && (
@@ -83,8 +101,8 @@ export function ForgotPasswordPage() {
                   textAlign: 'center'
                 }}>
                   <p style={{ color: '#cbd5e1', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-                    <strong>⚡ Instant Reset Link (Dev Mode):</strong><br />
-                    Mail provider is unconfigured locally. Click below to reset your password directly:
+                    <strong>⚡ Direct Reset Link (Fallback):</strong><br />
+                    Click below to reset your password directly:
                   </p>
                   <a
                     href={devResetUrl}
@@ -100,12 +118,6 @@ export function ForgotPasswordPage() {
                     🔑 Click Here to Reset Password
                   </a>
                 </div>
-              )}
-
-              {realMail === false && !emailDelivered && !devResetUrl && (
-                <p style={{ color: '#f59e0b', fontSize: '0.8125rem', marginBottom: '1.5rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '.5rem', padding: '.6rem .8rem' }}>
-                  ⚠️ Real email is not configured in backend/.env yet — check the backend console for the reset link.
-                </p>
               )}
 
               <div>
