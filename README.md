@@ -2,8 +2,9 @@
 
 > AI-powered resume & career intelligence: JD-aware match + ATS scores, skills gaps, rewrite coaching, cover letters, roadmaps, interview prep, PDF reports — unlimited analyses for every account.
 
-**Live app:** https://resumetric-challengers13.vercel.app  
-**API:** https://resumetric-rus3.onrender.com · **Docs:** https://resumetric-rus3.onrender.com/docs · **Health:** https://resumetric-rus3.onrender.com/health
+**Primary Production URL:** https://resumetric-1.onrender.com (Unified React 19 Frontend + FastAPI Backend)  
+**Edge CDN Frontend:** https://resumetric-challengers13.vercel.app  
+**API Documentation:** https://resumetric-1.onrender.com/docs · **Health Check:** https://resumetric-1.onrender.com/health
 
 ---
 
@@ -25,7 +26,7 @@
 - Secure signup with explicit login (email pre-filled upon account creation)
 - JWT access (30 min) + rotating cross-origin httpOnly refresh cookies (`SameSite=None` in production)
 - Email verification & forgot/reset password via **Gmail SMTP** (SSL/STARTTLS) → Brevo HTTPS → Resend fallback
-- Instant development reset button on screen during local testing
+- Email verification & forgot/reset password delivered directly to user inbox with secure single-use tokens
 - User dashboard (history, stats, trends) + admin dashboard (platform stats, missing skills, user search)
 
 ---

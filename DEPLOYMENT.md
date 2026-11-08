@@ -55,7 +55,7 @@ Render's free tier automatically pauses services after 15 minutes of zero traffi
 2. Click **Add New Monitor**.
    - **Monitor Type:** `HTTP(s)`
    - **Friendly Name:** `CareerLens Keep-Alive`
-   - **URL (or IP):** `https://your-service-name.onrender.com/health`
+   - **URL (or IP):** `https://resumetric-1.onrender.com/health` (or your custom domain)
    - **Monitoring Interval:** `Every 10 minutes` (or `Every 5 minutes`)
 3. Click **Create Monitor**.
 

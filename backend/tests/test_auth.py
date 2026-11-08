@@ -31,3 +31,11 @@ def test_refresh_token_creation():
     assert len(raw_token) > 20
     assert hash_token(raw_token) == hashed_token
 
+def test_reset_url_uses_primary_domain():
+    from app.core.config import settings
+    token = "sample-token-123"
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+    assert "resumetric-1.onrender.com" in settings.FRONTEND_URL or "localhost" in settings.FRONTEND_URL
+    assert f"token={token}" in reset_url
+
+
