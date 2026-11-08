@@ -54,6 +54,19 @@ def _celery_available() -> bool:
         return False
 
 
+def _safe_json(val, default):
+    if val is None:
+        return default
+    if isinstance(val, (dict, list)):
+        return val
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except Exception:
+            return default
+    return default
+
+
 def analysis_to_dict(analysis: Analysis) -> dict:
     return {
         "id": str(analysis.id),
@@ -63,11 +76,11 @@ def analysis_to_dict(analysis: Analysis) -> dict:
         "company_name": analysis.company_name,
         "match_score": analysis.match_score,
         "ats_score": analysis.ats_score,
-        "matched_skills": analysis.matched_skills,
-        "missing_skills": analysis.missing_skills,
-        "extracted_entities": analysis.extracted_entities,
-        "feedback": analysis.feedback,
-        "skill_roadmap": analysis.skill_roadmap,
+        "matched_skills": _safe_json(analysis.matched_skills, []),
+        "missing_skills": _safe_json(analysis.missing_skills, []),
+        "extracted_entities": _safe_json(analysis.extracted_entities, {}),
+        "feedback": _safe_json(analysis.feedback, {}),
+        "skill_roadmap": _safe_json(analysis.skill_roadmap, []),
         "report_url": analysis.report_url,
         "report_emailed": analysis.report_emailed,
         "error_message": analysis.error_message,

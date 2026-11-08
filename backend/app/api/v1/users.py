@@ -88,7 +88,8 @@ async def get_user_stats(
 
     completed = [a for a in analyses if a.match_score is not None]
     avg_match = sum(a.match_score for a in completed) / len(completed) if completed else 0
-    avg_ats = sum(a.ats_score for a in completed if a.ats_score) / len(completed) if completed else 0
+    ats_items = [a.ats_score for a in completed if a.ats_score is not None]
+    avg_ats = sum(ats_items) / len(ats_items) if ats_items else 0
 
     # Trend data for chart (last 10 analyses)
     trend = [

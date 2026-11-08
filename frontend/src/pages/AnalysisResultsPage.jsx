@@ -383,14 +383,14 @@ export default function AnalysisResultsPage() {
                 </span>
               </h3>
               <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>{analysis.feedback.resume_score.verdict}</p>
-              {Object.entries(analysis.feedback.resume_score.breakdown).map(([k, v]) => (
+              {Object.entries(analysis.feedback.resume_score.breakdown || {}).map(([k, v]) => (
                 <div key={k} style={{ margin: '0.5rem 0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: '#94a3b8' }}>
                     <span style={{ textTransform: 'capitalize' }}>{k}</span>
-                    <span>{v.score}/{v.max}</span>
+                    <span>{v?.score ?? 0}/{v?.max ?? 0}</span>
                   </div>
                   <div style={{ height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 4 }}>
-                    <div style={{ width: `${(v.score / v.max) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)' }} />
+                    <div style={{ width: `${((v?.score || 0) / (v?.max || 1)) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)' }} />
                   </div>
                 </div>
               ))}

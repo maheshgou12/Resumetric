@@ -69,11 +69,21 @@ async def get_top_missing_skills(
     )
     all_missing = result.scalars().all()
 
+    import json
+
     counter = Counter()
     for skills_list in all_missing:
-        if skills_list:
+        if not skills_list:
+            continue
+        if isinstance(skills_list, str):
+            try:
+                skills_list = json.loads(skills_list)
+            except Exception:
+                skills_list = [s.strip() for s in skills_list.split(",") if s.strip()]
+        if isinstance(skills_list, (list, tuple, set)):
             for skill in skills_list:
-                counter[skill] += 1
+                if skill and isinstance(skill, str):
+                    counter[skill.strip()] += 1
 
     top = [{"skill": s, "count": c} for s, c in counter.most_common(limit)]
     return top

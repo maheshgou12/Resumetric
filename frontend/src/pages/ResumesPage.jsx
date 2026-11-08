@@ -19,7 +19,7 @@ export default function ResumesPage() {
   const upload = useMutation({
     mutationFn: (fd) => api.post('/career/resumes', fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
     onSuccess: (r) => {
-      toast.success(`Uploaded v${r.data.version} — Score ${r.data.resume_score.overall}/100`)
+      toast.success(`Uploaded v${r.data.version} — Score ${r.data.resume_score?.overall ?? '—'}/100`)
       qc.invalidateQueries(['resumes'])
       setFile(null); setName('')
     },
@@ -34,7 +34,7 @@ export default function ResumesPage() {
 
   const reanalyze = useMutation({
     mutationFn: (id) => api.post(`/career/resumes/${id}/reanalyze`),
-    onSuccess: (r) => { toast.success(`Re-scored: ${r.data.resume_score.overall}/100`); qc.invalidateQueries(['resumes']) },
+    onSuccess: (r) => { toast.success(`Re-scored: ${r.data.resume_score?.overall ?? '—'}/100`); qc.invalidateQueries(['resumes']) },
     onError: () => toast.error('Re-analyze failed'),
   })
 

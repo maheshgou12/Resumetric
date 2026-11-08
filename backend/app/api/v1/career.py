@@ -30,11 +30,27 @@ ALLOWED = {"application/pdf",
 MAX_SIZE = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 
+import json
+
+def _safe_json(val, default):
+    if val is None:
+        return default
+    if isinstance(val, (dict, list)):
+        return val
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except Exception:
+            return default
+    return default
+
+
 def _resume_to_dict(r: Resume) -> dict:
     return {
         "id": str(r.id), "name": r.name, "version": r.version,
         "target_role": r.target_role, "filename": r.filename,
-        "entities": r.entities, "resume_score": r.resume_score,
+        "entities": _safe_json(r.entities, {}),
+        "resume_score": _safe_json(r.resume_score, {}),
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "words": len((r.content or "").split()),
     }
@@ -103,10 +119,14 @@ async def compare_resumes(body: CompareReq, db: AsyncSession = Depends(get_db),
         return r
     a, b = await _get(body.resume_a_id), await _get(body.resume_b_id)
     d = diff_texts(a.content or "", b.content or "")
-    sa = (a.resume_score or {}).get("overall", 0)
-    sb = (b.resume_score or {}).get("overall", 0)
-    skills_a = set((a.entities or {}).get("skills", []))
-    skills_b = set((b.entities or {}).get("skills", []))
+    score_a = _safe_json(a.resume_score, {})
+    score_b = _safe_json(b.resume_score, {})
+    sa = score_a.get("overall", 0) if isinstance(score_a, dict) else 0
+    sb = score_b.get("overall", 0) if isinstance(score_b, dict) else 0
+    ent_a = _safe_json(a.entities, {})
+    ent_b = _safe_json(b.entities, {})
+    skills_a = set(ent_a.get("skills", []) if isinstance(ent_a, dict) else [])
+    skills_b = set(ent_b.get("skills", []) if isinstance(ent_b, dict) else [])
     return {
         "a": {"id": str(a.id), "name": a.name, "version": a.version, "score": sa},
         "b": {"id": str(b.id), "name": b.name, "version": b.version, "score": sb},
@@ -279,7 +299,10 @@ async def progress(db: AsyncSession = Depends(get_db),
     res2 = await db.execute(select(Resume).where(
         Resume.user_id == current_user.id).order_by(Resume.created_at))
     rws = res2.scalars().all()[-100:]
-    rtrend = [{"name": r.name, "version": r.version,
-               "score": (r.resume_score or {}).get("overall", 0)} for r in rws]
+    rtrend = []
+    for r in rws:
+        sc = _safe_json(r.resume_score, {})
+        overall = sc.get("overall", 0) if isinstance(sc, dict) else 0
+        rtrend.append({"name": r.name, "version": r.version, "score": overall})
     return {"analyses": len(rows), "resumes": len(rws),
             "match_trend": trend, "resume_trend": rtrend}

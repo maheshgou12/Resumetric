@@ -60,15 +60,48 @@ def generate_pdf_report(
     user_email: str,
     resume_filename: str,
     job_description_preview: str,
-    match_score: float,
-    ats_score: float,
-    matched_skills: list,
-    missing_skills: list,
-    feedback: dict,
-    skill_roadmap: list,
+    match_score: Optional[float],
+    ats_score: Optional[float],
+    matched_skills: Optional[list],
+    missing_skills: Optional[list],
+    feedback: Optional[dict],
+    skill_roadmap: Optional[list],
     analysis_id: str,
 ) -> bytes:
     """Generate a professional PDF analysis report and return as bytes"""
+    import json
+
+    # Ensure robust fallbacks for all parameters
+    match_score = float(match_score) if match_score is not None else 0.0
+    ats_score = float(ats_score) if ats_score is not None else 0.0
+
+    if isinstance(matched_skills, str):
+        try:
+            matched_skills = json.loads(matched_skills)
+        except Exception:
+            matched_skills = [s.strip() for s in matched_skills.split(",") if s.strip()]
+    matched_skills = list(matched_skills or [])
+
+    if isinstance(missing_skills, str):
+        try:
+            missing_skills = json.loads(missing_skills)
+        except Exception:
+            missing_skills = [s.strip() for s in missing_skills.split(",") if s.strip()]
+    missing_skills = list(missing_skills or [])
+
+    if isinstance(feedback, str):
+        try:
+            feedback = json.loads(feedback)
+        except Exception:
+            feedback = {}
+    feedback = feedback or {}
+
+    if isinstance(skill_roadmap, str):
+        try:
+            skill_roadmap = json.loads(skill_roadmap)
+        except Exception:
+            skill_roadmap = []
+    skill_roadmap = skill_roadmap or []
     buffer = BytesIO()
 
     doc = SimpleDocTemplate(

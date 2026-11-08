@@ -75,6 +75,8 @@ def upload_pdf_report(file_content: bytes, analysis_id: str) -> Optional[str]:
 
 def get_presigned_url(key: str, expires_in: int = 3600) -> Optional[str]:
     """Generate a presigned URL for downloading a file"""
+    if not _cloud_configured() or not key:
+        return None
     try:
         client = get_s3_client()
         url = client.generate_presigned_url(
@@ -89,6 +91,8 @@ def get_presigned_url(key: str, expires_in: int = 3600) -> Optional[str]:
 
 
 def delete_file(key: str) -> bool:
+    if not _cloud_configured() or not key:
+        return False
     try:
         client = get_s3_client()
         client.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=key)
