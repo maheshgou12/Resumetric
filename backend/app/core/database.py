@@ -25,7 +25,12 @@ def _make_engine():
     elif url.startswith("sqlite://"):
         url = url.replace("sqlite://", "sqlite+aiosqlite://", 1)
     if url.startswith("sqlite"):
-        # Local zero-setup mode: sqlite+aiosqlite:///./careerlens.db
+        # Local zero-setup mode: ensure relative path resolves canonically to backend/careerlens.db
+        if "///./" in url or url.endswith("careerlens.db"):
+            from pathlib import Path
+            backend_dir = Path(__file__).resolve().parent.parent.parent
+            db_path = (backend_dir / "careerlens.db").resolve().as_posix()
+            url = f"sqlite+aiosqlite:///{db_path}"
         return create_async_engine(
             url,
             echo=settings.DEBUG,

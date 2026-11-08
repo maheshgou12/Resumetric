@@ -5,6 +5,14 @@ import json
 import os
 
 
+from pathlib import Path
+
+_ENV_PATHS = (
+    str(Path(__file__).resolve().parent.parent.parent / ".env"),
+    ".env",
+)
+
+
 class Settings(BaseSettings):
     # App
     APP_NAME: str = "Resume Analyzer Pro"
@@ -95,7 +103,7 @@ class Settings(BaseSettings):
     # Sentry
     SENTRY_DSN: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_PATHS, case_sensitive=True, extra="ignore")
 
 
 settings = Settings()
