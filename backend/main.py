@@ -70,6 +70,11 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "version": "2.0.0"}
+
+
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -109,8 +114,3 @@ else:
             "health": "/health",
             "api": "/api/v1",
         }
-
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "version": "1.0.0"}
