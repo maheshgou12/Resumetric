@@ -13,13 +13,8 @@ const forgotSchema = z.object({
 export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [realMail, setRealMail] = useState(null)
-  const [devResetUrl, setDevResetUrl] = useState(null)
   const [emailDelivered, setEmailDelivered] = useState(false)
 
-  useEffect(() => {
-    api.get('/auth/email-status').then(r => setRealMail(r.data.resend_configured)).catch(() => setRealMail(null))
-  }, [])
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(forgotSchema),
   })
@@ -29,9 +24,6 @@ export function ForgotPasswordPage() {
     try {
       const resp = await api.post('/auth/forgot-password', data)
       setEmailDelivered(Boolean(resp.data?.email_delivered))
-      if (resp.data?.dev_reset_url) {
-        setDevResetUrl(resp.data.dev_reset_url)
-      }
       setSent(true)
     } catch {
       toast.error('Something went wrong. Please try again.')
@@ -88,35 +80,6 @@ export function ForgotPasswordPage() {
                   lineHeight: 1.5,
                 }}>
                   If an account exists for this email address, a password reset link has been dispatched to it. Please check your inbox and spam folder.
-                </div>
-              )}
-
-              {devResetUrl && (
-                <div style={{
-                  background: 'rgba(99,102,241,0.1)',
-                  border: '1px solid rgba(99,102,241,0.25)',
-                  borderRadius: '.75rem',
-                  padding: '1.25rem',
-                  marginBottom: '1.5rem',
-                  textAlign: 'center'
-                }}>
-                  <p style={{ color: '#cbd5e1', fontSize: '0.85rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-                    <strong>⚡ Direct Reset Link (Fallback):</strong><br />
-                    Click below to reset your password directly:
-                  </p>
-                  <a
-                    href={devResetUrl}
-                    className="btn-primary"
-                    style={{
-                      display: 'inline-flex',
-                      padding: '0.625rem 1.25rem',
-                      fontSize: '0.875rem',
-                      textDecoration: 'none',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    🔑 Click Here to Reset Password
-                  </a>
                 </div>
               )}
 

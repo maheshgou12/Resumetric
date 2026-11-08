@@ -828,9 +828,6 @@ async def forgot_password(
         ),
         "email_delivered": email_delivered,
     }
-    if dev_reset_url:
-        resp["dev_reset_url"] = dev_reset_url
-
     return resp
 
 

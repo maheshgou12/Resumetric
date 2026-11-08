@@ -37,3 +37,4 @@ EXPOSE 8000
 
 # Shell form expands ${PORT} dynamically on Render/Railway/Fly
 CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+

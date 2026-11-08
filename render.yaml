@@ -28,12 +28,28 @@ services:
         value: careerlens-prod
       - key: S3_REGION
         value: auto
+      - key: FRONTEND_URL
+        value: https://resumetric-1.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://resumetric-1.onrender.com,http://localhost:5173
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 465
       # ── Fill these in Render dashboard (Environment tab) ──
       - key: JWT_SECRET_KEY
         sync: false
       - key: SECRET_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_APP_PASSWORD
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
         sync: false
       - key: RESEND_API_KEY
         sync: false
@@ -42,10 +58,6 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
-      - key: ALLOWED_ORIGINS
         sync: false
       - key: SENTRY_DSN
         sync: false

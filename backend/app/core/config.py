@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     # Create an App Password at myaccount.google.com/apppasswords (needs 2-Step Verification).
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 465
-    SMTP_USERNAME: str = ""
-    SMTP_APP_PASSWORD: str = ""
+    SMTP_USERNAME: str = os.getenv("SMTP_USERNAME") or "maheshburra2712@gmail.com"
+    SMTP_APP_PASSWORD: str = os.getenv("SMTP_APP_PASSWORD") or "iocq hdqz xsio ztmx"
 
     # AWS S3 / Cloudflare R2
     S3_ACCESS_KEY_ID: str = ""
@@ -72,6 +72,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://resumetric-1.onrender.com",
         "https://resumetric-challengers13.vercel.app",
         "https://resume-analyzer-pro.vercel.app",
     ]
@@ -79,20 +80,38 @@ class Settings(BaseSettings):
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def _split_origins(cls, v):
+        origins = []
         if isinstance(v, str):
             s = v.strip()
             if s.startswith("["):
                 try:
                     parsed = json.loads(s)
                     if isinstance(parsed, list):
-                        return [str(o).strip() for o in parsed if str(o).strip()]
+                        origins = [str(o).strip() for o in parsed if str(o).strip()]
                 except Exception:
                     pass
-            return [o.strip() for o in s.split(",") if o.strip()]
-        return v
+            if not origins:
+                origins = [o.strip() for o in s.split(",") if o.strip()]
+        elif isinstance(v, list):
+            origins = list(v)
+
+        for default_url in ("https://resumetric-1.onrender.com", os.environ.get("RENDER_EXTERNAL_URL")):
+            if default_url and default_url not in origins:
+                origins.append(default_url)
+        return origins
 
     # Frontend URL (for email links)
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "https://resumetric-1.onrender.com"
+
+    @field_validator("FRONTEND_URL", mode="before")
+    @classmethod
+    def _resolve_frontend_url(cls, v):
+        render_url = os.environ.get("RENDER_EXTERNAL_URL")
+        if render_url:
+            return render_url.rstrip("/")
+        if v and not v.startswith("http://localhost"):
+            return v.rstrip("/")
+        return "https://resumetric-1.onrender.com"
 
     # File Uploads
     MAX_UPLOAD_SIZE_MB: int = 5
