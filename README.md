@@ -1,60 +1,184 @@
+<div align="center">
+
 # ⚡ CareerLens AI — Resumetric
+### Autonomous Resume Intelligence, ATS Scoring & AI Career Acceleration Platform
 
-> AI-powered resume & career intelligence: JD-aware match + ATS scores, skills gaps, rewrite coaching, cover letters, roadmaps, interview prep, PDF reports — unlimited analyses for every account.
+[![Production](https://img.shields.io/badge/Production-Live%20on%20Render-46E3B7?style=flat&logo=render&logoColor=white)](https://resumetric-1.onrender.com)
+[![Vercel Edge](https://img.shields.io/badge/Edge%20CDN-Vercel-black?style=flat&logo=vercel&logoColor=white)](https://resumetric-challengers13.vercel.app)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Primary Production URL:** https://resumetric-1.onrender.com (Unified React 19 Frontend + FastAPI Backend)  
-**Edge CDN Frontend:** https://resumetric-challengers13.vercel.app  
-**API Documentation:** https://resumetric-1.onrender.com/docs · **Health Check:** https://resumetric-1.onrender.com/health
+<br />
 
----
+**CareerLens AI** is an enterprise-grade resume intelligence platform that bridges the gap between candidates and Applicant Tracking Systems (ATS). Using TF-IDF cosine matching, 75+ detected skill ontologies, Groq-accelerated LLMs (`llama-3.3-70b-versatile`), and deterministic heuristic engines, it delivers instant, JD-aware scoring, tailored cover letters, interactive rewrite coaching, learning roadmaps, and downloadable executive PDF reports.
 
-## ✨ Features
+[Explore Live App](https://resumetric-1.onrender.com) • [API Swagger Docs](https://resumetric-1.onrender.com/docs) • [Keep-Alive Health](https://resumetric-1.onrender.com/health) • [Deployment Guide](DEPLOYMENT.md)
 
-### Analysis (unlimited per account)
-- **AI Match Score** — TF-IDF cosine similarity between resume and job description
-- **JD-aware ATS Score** — format (40) + JD skill coverage (35) + JD keyword overlap (25), with point-wise reasons
-- **Skills Gap** — 75+ detected skills, matched vs missing, learning roadmap with free resources
-- **LLM Feedback** — Groq (`llama-3.3-70b-versatile` with automatic model fallback & offline heuristics)
-- **AI Rewrite Coach** — chat with resume + JD context, structured markdown replies
-- **Cover Letter Generator** — one-click tailored letter
-- **PDF Report** — ReportLab report with scores, skills, roadmap
-- **100-pt Resume Score + Career Domains** — offline heuristic, 10 domains ranked by fit
-- **Interview Prep** — domain questions + STAR tips · **Progress trends** · **Resume library** (versions, compare, re-analyze)
-
-### Accounts & Mail
-- Email + password (bcrypt, strength rules, case-insensitive) and Google OAuth (server-verified)
-- Secure signup with explicit login (email pre-filled upon account creation)
-- JWT access (30 min) + rotating cross-origin httpOnly refresh cookies (`SameSite=None` in production)
-- Email verification & forgot/reset password via **Gmail SMTP** (SSL/STARTTLS) → Brevo HTTPS → Resend fallback
-- Email verification & forgot/reset password delivered directly to user inbox with secure single-use tokens
-- User dashboard (history, stats, trends) + admin dashboard (platform stats, missing skills, user search)
+</div>
 
 ---
 
-## 🛠️ Run Locally
+## 🌐 Live Deployments
 
-### 1-Click Launch (Windows)
+| Component | Provider | URL | Notes |
+| :--- | :--- | :--- | :--- |
+| **Primary Production (Fullstack)** | **Render** | [https://resumetric-1.onrender.com](https://resumetric-1.onrender.com) | Unified React 19 SPA + FastAPI Backend |
+| **Global Edge Frontend** | **Vercel** | [https://resumetric-challengers13.vercel.app](https://resumetric-challengers13.vercel.app) | Worldwide low-latency CDN distribution |
+| **REST API & Swagger Docs** | **Render** | [https://resumetric-1.onrender.com/docs](https://resumetric-1.onrender.com/docs) | Interactive OpenAPI 3.0 test console |
+| **24/7 Keep-Alive Monitor** | **UptimeRobot** | [https://resumetric-1.onrender.com/health](https://resumetric-1.onrender.com/health) | Prevents service sleeping & cold starts |
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Clients["Global Users & Clients"]
+        Browser["Desktop & Mobile Browsers"]
+    end
+
+    subgraph CDN["Global Edge Distribution"]
+        Vercel["Vercel Edge Network (Optional Frontend CDN)"]
+        RenderSPA["Render Unified Production Host"]
+    end
+
+    subgraph Backend["FastAPI High-Performance Engine"]
+        API["FastAPI 0.115+ Application"]
+        AuthModule["Auth & Security (JWT, bcrypt, Refresh Cookies)"]
+        Parser["Resume Parser (PDF, DOCX, TXT)"]
+        ScoringEngine["JD-Aware ATS & Match Engine"]
+        LLMCoach["Groq AI Engine (llama-3.3-70b-versatile)"]
+        PDFGen["ReportLab Executive PDF Generator"]
+    end
+
+    subgraph DataMail["Persistence & Communication"]
+        DB[(PostgreSQL / SQLite WAL)]
+        SMTP["Gmail SMTP (SSL 465 / STARTTLS 587 Fallback)"]
+        UptimeRobot["UptimeRobot (10-min Zero-Sleep Ping)"]
+    end
+
+    Browser -->|HTTPS| RenderSPA
+    Browser -->|HTTPS| Vercel
+    Vercel -->|API Reverse Proxy| API
+    RenderSPA -->|Internal Routing| API
+    UptimeRobot -->|Keep-Alive GET /health| API
+
+    API --> AuthModule
+    API --> Parser
+    API --> ScoringEngine
+    API --> LLMCoach
+    API --> PDFGen
+
+    AuthModule --> DB
+    AuthModule -->|Dispatches Reset Links| SMTP
+    ScoringEngine --> DB
+```
+
+---
+
+## ✨ Core Capabilities
+
+### 1. Resume Intelligence & JD Matching
+- **TF-IDF Vector Matching:** Computes mathematical cosine similarity between candidate experience and target job descriptions.
+- **JD-Aware ATS Score (100 pts):**
+  - **40 pts:** Structural & format hygiene (contact info, sections, bullet points, length).
+  - **35 pts:** Required skill coverage (matched vs missing from JD).
+  - **25 pts:** Keyword density and domain term overlap.
+- **Career Domains Classification:** Evaluates candidate fit across 10 top tech domains (Full Stack, Backend, Frontend, Cloud/DevOps, Data/ML, Mobile, Security, QA, UI/UX, Product).
+
+### 2. AI-Powered Coaching & Cover Letters
+- **Groq Llama-3.3-70B Acceleration:** Ultra-low latency responses with offline heuristic fallbacks when unconfigured.
+- **Interactive AI Rewrite Coach:** Tailors bullet points to highlight quantifiable business impact (STAR methodology).
+- **One-Click Tailored Cover Letters:** Generates customized cover letters matched directly to the target role.
+- **Technical Interview Simulator:** Surfaces domain-specific behavioral and technical interview questions with suggested answers.
+
+### 3. Enterprise Security & Account Management
+- **Strict Direct-to-Email Password Reset:** Password reset links are dispatched **strictly to the user's verified inbox** using dual-port Gmail SMTP (Port 465 SSL with automatic Port 587 STARTTLS fallback). Zero on-screen token leaks.
+- **Explicit Authentication on Sign-Up:** New users register and are redirected to login with their email pre-filled to authenticate securely with their credentials.
+- **Dual Token JWT Architecture:** 30-minute access tokens paired with rotating, cross-origin `httpOnly` refresh cookies (`SameSite=None` in production).
+
+### 4. Executive Reporting & Analytics
+- **Downloadable PDF Reports:** Professional ReportLab-generated analytics dossiers containing charts, ATS breakdowns, missing keywords, and learning resources.
+- **Admin Dashboard:** Platform-wide telemetry, user growth trends, popular missing skills radar, and user search.
+
+---
+
+## 📁 Repository Directory Structure
+
+```text
+Resumetric/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/              # REST routes (auth, analysis, career, admin, users)
+│   │   ├── core/                # App config, database session, security, deps
+│   │   ├── models/              # SQLAlchemy 2.0 ORM database models
+│   │   ├── services/            # ATS scoring, Groq LLM, email, PDF generation
+│   │   └── celery_tasks.py      # Async background processing tasks
+│   ├── tests/                   # Pytest automated test suite
+│   ├── main.py                  # FastAPI application entry & SPA catch-all
+│   ├── requirements.txt         # Python dependencies
+│   ├── seed_demo.py             # Pre-seeds demo and admin accounts
+│   └── test_email.py            # SMTP diagnostic and delivery test tool
+├── frontend/
+│   ├── src/
+│   │   ├── components/          # Reusable UI widgets & navigation
+│   │   ├── context/             # Global AuthContext & session state
+│   │   ├── lib/                 # Axios client & API interceptors
+│   │   └── pages/               # React 19 views (Dashboard, Analyze, Auth, etc.)
+│   ├── package.json             # Node dependencies (Vite, React 19, Tailwind v4)
+│   └── vite.config.js           # Vite build configuration
+├── DEPLOYMENT.md                # 24/7 Global production deployment manual
+├── Dockerfile                   # Universal multi-stage production container
+├── docker-compose.yml           # Local full-stack containerized orchestrator
+├── render.yaml                  # Render Blueprint infrastructure as code
+├── start-dev.bat                # 1-Click Windows Batch launcher
+├── start-dev.ps1                # 1-Click PowerShell launcher
+├── vercel.json                  # Vercel Edge routing configuration
+├── CONTRIBUTING.md              # Contribution standards & guidelines
+├── SECURITY.md                  # Security policies & vulnerability reporting
+└── LICENSE                      # MIT Open Source License
+```
+
+---
+
+## 🚀 Quick Start (Local Development)
+
+### Option 1: 1-Click Windows Launcher
 Double-click `start-dev.bat` or run:
 ```powershell
 .\start-dev.ps1
 ```
-This automatically starts:
-- **Backend API**: http://127.0.0.1:8000 (Swagger docs at `/docs`)
-- **Frontend App**: http://localhost:5173
+This automatically boots:
+- **FastAPI Backend:** [http://127.0.0.1:8000](http://127.0.0.1:8000) (Docs: `/docs`)
+- **Vite React Frontend:** [http://localhost:5173](http://localhost:5173)
 
 ---
 
-### Manual Launch (Two Terminals)
+### Option 2: Cross-Platform Manual Setup
 
-Prerequisites: Python 3.11+, Node.js 20+.
+#### Prerequisites
+- **Python 3.11+**
+- **Node.js 20+**
 
+#### 1. Backend Setup
 ```bash
-# Terminal 1 - Backend
 cd backend
+python -m venv venv
+
+# Windows:
+.\venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
 pip install -r requirements.txt
 python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
 
-# Terminal 2 - Frontend
+#### 2. Frontend Setup
+```bash
+# In a new terminal:
 cd frontend
 npm install
 npm run dev
@@ -62,64 +186,80 @@ npm run dev
 
 ---
 
-## 🔑 Pre-Seeded Demo Accounts
+## 🔑 Pre-Seeded Demonstration Accounts
 
-To explore the dashboard and analytics immediately without manual entry, run:
+To immediately test all user and administrator dashboards without manual data entry:
+
 ```bash
 cd backend
 python seed_demo.py
 ```
 
-| Account | Email | Password | Access Level |
-|---|---|---|---|
-| **Admin** | `admin@careerlens.ai` | `Admin@12345` | Full features + Admin Analytics Dashboard (`/admin`) |
-| **Demo User** | `demo@careerlens.ai` | `Demo@12345` | Pre-loaded resumes, ATS 85%, Match 88.5%, and charts |
+| Account Role | Email Address | Password | Permissions & Pre-Loaded Data |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin@careerlens.ai` | `Admin@12345` | Full platform access + Global Admin Analytics (`/admin`) |
+| **Demo Candidate** | `demo@careerlens.ai` | `Demo@12345` | Pre-loaded resumes, 85% ATS score, 88.5% JD match, and charts |
 
 ---
 
-## ✉️ Email Testing (Gmail SMTP)
+## 🧪 Testing Suite
 
-To test your Gmail SMTP connection and verify emails land in your inbox:
+CareerLens AI maintains end-to-end unit and integration tests across scoring algorithms, token hashing, and authentication flows:
+
 ```bash
-cd backend
-python test_email.py
+# Execute backend test suite
+python -m pytest backend/tests -v
+
+# Verify frontend production build
+npm --prefix frontend run build
 ```
 
 ---
 
-## 🏗️ Tech Stack
+## 🌐 24/7 Zero-Sleep Global Deployment
 
-| Layer | Tech |
-|---|---|
-| Frontend | React 19 + Vite, Tailwind v4, Router v7, React Query, Recharts, Axios, react-markdown |
-| Backend | FastAPI, SQLAlchemy 2 async (SQLite WAL / PostgreSQL asyncpg), Pydantic v2, bcrypt/JWT, Groq, scikit-learn, ReportLab |
-| Email | Gmail SMTP (465/587) → Brevo HTTPS → Resend fallback |
-| Deploy | Vercel (Edge CDN Frontend) + Render (Backend + Managed PostgreSQL) |
+CareerLens AI is packaged to run 24/7 anywhere online without limits or cold-start sleep delays:
+
+### 1. Render One-Click Unified Deployment (Recommended)
+FastAPI bundles and serves the compiled React 19 frontend directly from `frontend/dist`.
+1. Fork or push this repository to GitHub.
+2. In [dashboard.render.com](https://dashboard.render.com), create a **New Blueprint** and select `render.yaml`.
+3. Add your environment variables (`GROQ_API_KEY`, `SMTP_USERNAME`, `SMTP_APP_PASSWORD`).
+
+### 2. Prevent Cold Starts (Keep-Alive Automation)
+Render pauses free instances after 15 minutes of inactivity. To ensure **zero sleep forever**:
+1. Create a free account at [UptimeRobot.com](https://uptimerobot.com).
+2. Add a new **HTTP(s) Monitor**:
+   - **URL:** `https://resumetric-1.onrender.com/health`
+   - **Interval:** Every 10 minutes.
+3. Your platform stays awake 24/7/365 with immediate response times.
+
+*For complete details on Koyeb, Hugging Face Spaces, and Docker VPS deployments, see [DEPLOYMENT.md](DEPLOYMENT.md).*
 
 ---
 
-## 🚀 Deploy to Production (Anytime, Globally)
+## ⚙️ Environment Variables Reference
 
-### 1. Push to GitHub
-```bash
-git remote add origin https://github.com/<YOUR_USERNAME>/<YOUR_REPO>.git
-git push -u origin main
-```
+| Variable | Required | Description | Example / Default |
+| :--- | :--- | :--- | :--- |
+| `APP_ENV` | Optional | Application mode (`development` or `production`) | `production` |
+| `DATABASE_URL` | Optional | Async database connection string | `sqlite+aiosqlite:///./careerlens.db` |
+| `FRONTEND_URL` | Yes | Target origin for email reset & verification links | `https://resumetric-1.onrender.com` |
+| `ALLOWED_ORIGINS` | Yes | Comma-separated list of allowed CORS origins | `https://resumetric-1.onrender.com,...` |
+| `GROQ_API_KEY` | Optional | Groq Cloud API key for Llama-3.3-70B intelligence | `gsk_...` |
+| `SMTP_HOST` | Yes | Outgoing email server | `smtp.gmail.com` |
+| `SMTP_PORT` | Yes | Outgoing port (465 SSL or 587 STARTTLS) | `465` |
+| `SMTP_USERNAME` | Yes | Sender email address | `you@gmail.com` |
+| `SMTP_APP_PASSWORD`| Yes | 16-character Google App Password | `xxxx xxxx xxxx xxxx` |
 
-### 2. Backend → Render
-1. Go to [dashboard.render.com](https://dashboard.render.com) -> **New +** -> **Blueprint**.
-2. Select your repository (Render automatically reads `render.yaml`).
-3. Set your environment variables in the Render dashboard:
-   - `JWT_SECRET_KEY`: Random 32+ character key
-   - `SECRET_KEY`: Random 32+ character key
-   - `FRONTEND_URL`: Your Vercel frontend URL
-   - `ALLOWED_ORIGINS`: Your Vercel frontend URL
-   - `SMTP_USERNAME` & `SMTP_APP_PASSWORD`: Your Gmail & App Password
-4. Deploy! Render provisions the FastAPI Web Service + PostgreSQL database with free SSL.
+---
 
-### 3. Frontend → Vercel
-1. In [Vercel](https://vercel.com), click **Add New** -> **Project** -> Import your repo.
-2. Root Directory: `frontend`
-3. Environment Variables:
-   - `VITE_API_URL`: `https://<your-render-backend-url>/api/v1`
-4. Deploy! Your app is instantly distributed across Vercel's global edge network.
+## 📄 License
+
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ by <b>Mahesh Burra</b> • Empowering careers through transparent AI intelligence</sub>
+</div>
