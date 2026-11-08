@@ -70,17 +70,45 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 
 
-@app.get("/", include_in_schema=False)
-async def root():
-    """Landing endpoint so browsers don't see `{"detail": "Not Found"}`."""
-    return {
-        "app": "CareerLens AI API",
-        "version": "2.0.0",
-        "status": "running",
-        "docs": "/docs",
-        "health": "/health",
-        "api": "/api/v1",
-    }
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi import HTTPException
+
+# Locate frontend production build directory if present
+DIST_DIRS = [
+    Path(__file__).resolve().parent.parent / "frontend" / "dist",
+    Path(__file__).resolve().parent / "dist",
+    Path("/app/frontend/dist"),
+    Path("/app/dist"),
+]
+dist_dir = next((d for d in DIST_DIRS if d.is_dir() and (d / "index.html").is_file()), None)
+
+if dist_dir:
+    assets_dir = dist_dir / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path in ("health", "docs", "redoc", "openapi.json"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        file_path = dist_dir / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(dist_dir / "index.html")
+else:
+    @app.get("/", include_in_schema=False)
+    async def root():
+        """Landing endpoint so browsers don't see `{"detail": "Not Found"}`."""
+        return {
+            "app": "CareerLens AI API",
+            "version": "2.0.0",
+            "status": "running",
+            "docs": "/docs",
+            "health": "/health",
+            "api": "/api/v1",
+        }
 
 
 @app.get("/health")
